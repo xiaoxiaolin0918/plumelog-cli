@@ -98,6 +98,7 @@ Risk:
 Discovery:
   plumelog --help
   plumelog query --help
+  plumelog skills list
   plumelog <command> --help`,
 		Example: `  plumelog doctor
   plumelog auth status --probe
@@ -133,6 +134,7 @@ Discovery:
 		a.newAlarmCmd(),
 		a.newAdminCmd(),
 		a.newAPICmd(),
+		a.newSkillsCmd(),
 		a.newVersionCmd(),
 	)
 	silence(root)
@@ -172,9 +174,13 @@ func mark(cmd *cobra.Command, level, short string) {
 }
 
 func (a *App) resolve(cmd *cobra.Command, _ []string) error {
-	if cmd.Name() == "version" {
+	if cmd.Name() == "version" || isSkillsCommand(cmd) {
 		a.format = "json"
+		if a.flagFormat != "" {
+			a.format = a.flagFormat
+		}
 		a.jq = a.flagJQ
+		a.dryRun = a.flagDryRun
 		return nil
 	}
 	if err := a.resolveInto(cmd); err != nil {

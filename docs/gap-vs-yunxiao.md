@@ -18,7 +18,7 @@
 | `--dry-run` / `--jq` / `--yes` | ✅ | ✅ |
 | confirmation_required + exit 10 | ✅ | ✅ exit **10** + `error.subtype=confirmation_required` |
 | profile / +onboard | ✅ | ❌ |
-| skills list/install + 随包 | ✅ | ⚠️ 仓内已有 `skills/`；**无** CLI 子命令 |
+| skills list/install + 随包 | ✅ | ✅ `plumelog skills list|read|path|install` |
 | update / self-update | ✅ | ❌（`go build`） |
 | smoke-checklist.md | ✅ | ✅（本轮新增短页） |
 | 域命令 + Risk 标注 | ✅ | ✅ |
@@ -45,9 +45,9 @@
 
 ## P1
 
-- [ ] **`plumelog skills list|read|path|install`**：install → `~/.agents/skills`（copy/symlink，`--force`）；随发布物带上 `skills/`
+- [x] **`plumelog skills list|read|path|install`**：install → `~/.agents/skills`（copy/symlink，`--force`）；随仓 `skills/`；Windows 默认 `%USERPROFILE%\.agents\skills`
 - [x] **`docs/smoke-checklist.md`**：从 qa 裁短的发版手跑页（本轮已加）
-- [ ] **GitHub 正式仓发布**：可见性按用户选定（PRIVATE/INTERNAL）；勿提交 `_e2e_cookies.txt` / 密钥 / 本地 exe（见 `.gitignore`）
+- [x] **GitHub 正式仓发布**：PRIVATE https://github.com/xiaoxiaolin0918/plumelog-cli（勿提交 cookies/exe/密钥）
 - [ ] **api skill 已写的 MSYS 注意**：若 Windows Agent 常用 `api`，可考虑 CLI 侧 unmangle（与 yunxiao 对齐）
 
 ## P2

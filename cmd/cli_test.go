@@ -48,6 +48,10 @@ func TestCommandTreeRisk(t *testing.T) {
 		"admin delete-by-query": "high-risk-write",
 		"api":                   "varies",
 		"version":               "read",
+		"skills list":            "read",
+		"skills read":            "read",
+		"skills path":            "read",
+		"skills install":         "write",
 	}
 	for path, want := range required {
 		cmd, _, err := root.Find(strings.Split(path, " "))

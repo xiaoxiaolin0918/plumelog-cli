@@ -141,14 +141,25 @@ plumelog config show
 
 **无**根级 `whoami`。等价：`plumelog auth status`（加 `--probe` 可验证会话）。P2 可补别名，见 gap 文档。
 
-## skills / self-update（占位）
+## skills / 安装
 
-当前 CLI **无** `plumelog skills …`、**无** `plumelog update`。
+CLI 已提供与 yunxiao 对齐的 skills 子命令：
 
-- 仓内技能：`skills/plumelog-*`（本目录树）
-- Agent 安装：手工复制/软链到 `~/.agents/skills`（或本机 Agent skill 根）；日后若实现 `skills install` / `update`，行为对齐 yunxiao（install → 用户 skills 目录；update 解压旁路 `skills/`）
-- 构建：`go build -o plumelog.exe .`（Windows 运维机：`D:\work\ops\plumelog-cli`）
+```bash
+plumelog skills list
+plumelog skills read plumelog-shared
+plumelog skills path                 # 仓内/旁路 skills 根
+plumelog skills path plumelog-query  # 单个 skill 目录
+plumelog skills install              # 复制到 ~/.agents/skills（Windows: %USERPROFILE%\.agents\skills）
+plumelog skills install --force      # 覆盖已存在
+plumelog skills install --symlink    # 软链（需 OS 支持）
+plumelog skills install --skill plumelog-shared --skill plumelog-query
+plumelog skills install --dir "D:\custom\skills" --dry-run
+```
 
+- 源目录：二进制旁 `skills/`、源码树 `skills/`、或 cwd `skills/`（含 `plumelog-*` + `SKILL.md`）
+- 默认安装根：`~/.agents/skills`（Unix）/ `%USERPROFILE%\.agents\skills`（Windows）
+- **无** `plumelog update` / self-update（P2）；构建：`go build -o plumelog.exe .`
 ## Windows / MSYS
 
 若在 git-bash 里调 `plumelog api` 且 path 以 `/` 开头，MSYS 可能改写路径。规避：`MSYS_NO_PATHCONV=1`、`MSYS2_ARG_CONV_EXCL='*'`，或用 PowerShell/cmd。CLI 侧尚未做 yunxiao 式 unmangle（P2）。

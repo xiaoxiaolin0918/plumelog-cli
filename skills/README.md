@@ -14,17 +14,23 @@ Agent 技能包，模式对齐 `yunxiao-cli/skills`：先读 **plumelog-shared**
 
 小仓可合并 query+trace、app+alarm；**admin 保持独立**。
 
-## 安装（现状）
+## 安装
 
-CLI 尚无 `plumelog skills install`。手工：
+```bash
+# 列出 / 读取 / 路径
+plumelog skills list
+plumelog skills read plumelog-shared
+plumelog skills path
+plumelog skills path plumelog-admin
 
-```powershell
-# 示例：拷到本机 Agent skills 根（路径按你的 Agent 约定调整）
-Copy-Item -Recurse D:\work\ops\plumelog-cli\skills\plumelog-* $env:USERPROFILE\.agents\skills\
+# 安装到 Agent skills 根（默认 ~/.agents/skills；Windows: %USERPROFILE%\.agents\skills）
+plumelog skills install
+plumelog skills install --force
+plumelog skills install --symlink
+plumelog skills install --skill plumelog-shared --skill plumelog-query
 ```
 
-或软链。需要二进制：`go build -o plumelog.exe .`（本机 `D:\work\ops\plumelog-cli\plumelog.exe`）。
-
+源：二进制旁或源码树中的 `skills/plumelog-*`（须含 `SKILL.md`）。需要二进制：`go build -o plumelog.exe .`
 ## 相关文档
 
 - `docs/gap-vs-yunxiao.md` — 相对 yunxiao 的完善清单（P0/P1/P2）
