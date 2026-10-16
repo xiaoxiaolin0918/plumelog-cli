@@ -1,0 +1,32 @@
+# plumelog-cli skills
+
+Agent 技能包，模式对齐 `yunxiao-cli/skills`：先读 **plumelog-shared**，再按域加载。
+
+| Skill | 目录 | 用途 |
+|-------|------|------|
+| plumelog-shared | `plumelog-shared/` | 鉴权、config、doctor、信封、门禁、脱敏、全局 flag |
+| plumelog-query | `plumelog-query/` | `query search\|dsl\|apps` |
+| plumelog-trace | `plumelog-trace/` | `trace get` |
+| plumelog-app | `plumelog-app/` | `app list` / `extend *` |
+| plumelog-alarm | `plumelog-alarm/` | `alarm *` |
+| plumelog-admin | `plumelog-admin/` | `admin *`（高风险单独，勿与只读域合并） |
+| plumelog-api | `plumelog-api/` | `api METHOD path` 逃生舱 |
+
+小仓可合并 query+trace、app+alarm；**admin 保持独立**。
+
+## 安装（现状）
+
+CLI 尚无 `plumelog skills install`。手工：
+
+```powershell
+# 示例：拷到本机 Agent skills 根（路径按你的 Agent 约定调整）
+Copy-Item -Recurse D:\work\ops\plumelog-cli\skills\plumelog-* $env:USERPROFILE\.agents\skills\
+```
+
+或软链。需要二进制：`go build -o plumelog.exe .`（本机 `D:\work\ops\plumelog-cli\plumelog.exe`）。
+
+## 相关文档
+
+- `docs/gap-vs-yunxiao.md` — 相对 yunxiao 的完善清单（P0/P1/P2）
+- `docs/smoke-checklist.md` — 发版后短 smoke
+- `docs/architecture.md` — 契约

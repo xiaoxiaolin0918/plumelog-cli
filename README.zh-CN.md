@@ -1,0 +1,148 @@
+# plumelog
+
+[PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
+
+二进制名是 **`plumelog`**。
+
+PlumeLog 使用和网页一样的 Session Cookie（常见名 `JSESSIONID`），不是 Bearer Token。CLI 不会在输出、日志或示例里打印密码或 Cookie 值。
+
+## 同步到本机
+
+在运维机上把本仓库放在：
+
+`D:\work\ops\plumelog-cli`
+
+在该目录编译出 `plumelog`。
+
+## 安装
+
+需要 Go 1.22 或更高版本。
+
+**Windows（本机运维目录）：**
+
+```powershell
+cd D:\work\ops\plumelog-cli
+go build -o plumelog.exe .
+go test ./...
+.\plumelog.exe --help
+.\plumelog.exe version
+```
+
+**Unix / Git Bash：**
+
+```bash
+go build -o plumelog .
+go test ./...
+./plumelog --help
+```
+
+## 30 秒上手
+
+```bash
+export PLUMELOG_BASE_URL=http://127.0.0.1:8891
+export PLUMELOG_LOGIN_PASSWORD='你的登录密码'
+export PLUMELOG_ADMIN_PASSWORD='你的管理密码'
+
+./plumelog doctor
+./plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
+./plumelog auth status
+./plumelog query search --app demo --level ERROR -q timeout
+./plumelog trace get --trace-id TRACE_ID
+./plumelog api POST /getRunModel
+```
+
+Windows PowerShell 可以把环境变量写成 `$env:PLUMELOG_LOGIN_PASSWORD = '你的登录密码'`。
+
+## 命令树
+
+```
+plumelog
+  auth login | logout | status          # 登录 / 登出 / 是否已有 Cookie
+  doctor                                  # 连通性、会话、getRunModel、队列
+  config get | set | path | show          # 配置；show 会脱敏
+  query search | dsl | apps               # 快捷查询、原始 DSL、应用名
+  trace get                               # trace=true 按 traceId 查链路
+  app list | extend list | add | del      # 应用名与扩展字段
+  alarm list | save | delete | messages   # 告警规则与监控消息
+  admin queue counts | clear              # 队列深度 / 清空
+  admin index info | delete | reset       # 索引
+  admin run-model | delete-by-query
+  api <METHOD> <path>                     # 原始 HTTP
+  version
+```
+
+`--help` 会标出 Risk：`read`、`write`、`high-risk-write`。`api` 的风险由路径决定。
+
+## 查询示例
+
+```bash
+./plumelog query search --app demo --level ERROR -q timeout \
+  --from-time 2024-01-02T00:00:00Z --to-time 2024-01-02T01:00:00Z
+
+./plumelog query search --dsl-file query.json \
+  --from-time 1700000000000 --to-time 1700003600000
+
+./plumelog query apps --source es
+./plumelog trace get --trace-id TRACE_ID --size 100
+```
+
+快捷条件与 Home.vue 一致：`appName` / `env` / `logLevel` / `traceId` / `className` / `serverName` 用 `match_phrase`，正文用 `query_string`，`--extend field=value` 可重复，时间打在 `dtTime` 上。`--exclude-app` 把应用放进 `must_not`。
+
+默认排序 `dtTime desc`。带了 `--trace-id` 则改为 `dtTime asc` + `seq asc`。高亮默认打开，`--no-highlight` 关闭。
+
+不写时间时，索引用最近 `default_time_window`（默认 1 小时）。`--to-time` 若在未来会被夹到当前时间。
+
+`--index` 或 `--range day|week|month` 会改走 `POST /query`。运行日志索引形如 `plume_log_run_YYYYMMDD`，链路索引形如 `plume_log_trace_YYYYMMDD`。
+
+## 逃生舱
+
+```bash
+./plumelog api POST /clientQuery \
+  --query size=20 --query from=0 \
+  --body-file query.json
+
+./plumelog api POST /deleteQueue --dry-run
+```
+
+URL = `base_url + path_prefix + path`。`--path-prefix` 默认 `auto`：先试 `""`，404 再试 `/plumelog`（若配置里写了 `/plumelog` 则先试它）。也可以设成 `root` 或 `/plumelog`。
+
+## 风险开关
+
+- **read**：直接执行。
+- **write**：直接执行。`--dry-run` 只打印请求。
+- **high-risk-write**：真正执行必须带 `--yes`（或 `-y`）。
+
+清空队列和删除索引还要 `--admin-password`（或环境变量 `PLUMELOG_ADMIN_PASSWORD`）。CLI 把它放进查询参数 `adminPassWord`，输出里永远打码。
+
+同样需要 `--yes` 的命令：`admin index reset`、`admin delete-by-query`、`alarm delete`、`app extend del`。上游的 `resetIndex` 和 `deleteByQuery` 并不校验管理密码，所以 CLI 不会把密码发到这两个接口。
+
+`--dry-run` 即使同时写了 `--yes` 也不会发请求。预览里有 Method、URL、打码后的 Header 和 Body。缺的确认项在 `would_require`。
+
+成功输出是 JSON 信封：`{"ok":true,"result":...}`。失败是 `{"ok":false,"error":"...","risk":"..."}`。`--jq .result` 可以再过滤。`--format` 支持 `json`（默认）、`pretty`、`table`。
+
+## 配置和 Cookie
+
+| | Unix | Windows |
+|--|------|---------|
+| 目录 | `$XDG_CONFIG_HOME/plumelog` 或 `~/.config/plumelog` | `%APPDATA%\plumelog` |
+| 配置 | `config.json`（权限 `0600`） | 同名文件 |
+| Cookie | `cookies.txt`（Netscape 格式，权限 `0600`） | 同名文件 |
+
+```bash
+./plumelog config show
+./plumelog config set base_url http://127.0.0.1:8891
+./plumelog config set path_prefix root
+```
+
+`config set` 拒绝写入密码。请用参数或环境变量：
+
+- `PLUMELOG_BASE_URL`（默认 `http://localhost:8891`，不要带末尾斜杠）
+- `PLUMELOG_PATH_PREFIX`
+- `PLUMELOG_LOGIN_USERNAME` / `PLUMELOG_LOGIN_PASSWORD`
+- `PLUMELOG_ADMIN_PASSWORD`
+
+优先级：命令行 > 环境变量 > `config.json` > 默认值。HTTP 超时默认 30 秒（`--timeout`）。
+
+## v0 不做
+
+实时控制台 WebSocket（`ws://<host>/plumelog/websocket`）留给以后。看滚动日志请用网页。

@@ -1,0 +1,18 @@
+# binaries / local build
+/plumelog
+/plumelog.exe
+*.exe
+*.test
+/bin/
+/dist/
+
+# cookies & secrets (never commit)
+_e2e_cookies.txt
+*_cookies.txt
+cookies.txt
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
