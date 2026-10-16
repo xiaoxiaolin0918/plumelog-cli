@@ -56,24 +56,6 @@ Cookie jar 默认：
 覆盖：`--cookie-jar`。`auth status` / `doctor` / `config show` **只**报元数据，不打印 Cookie 值。
 
 
-## 401 自动重登（Issue #2，opt-in）
-
-Session Cookie 可能数小时失效。遇上游 code:401 / HTTP 401 时，可选择自动重登**一次**并重放原请求：
-
-`ash
-export PLUMELOG_LOGIN_USERNAME="..."
-export PLUMELOG_LOGIN_PASSWORD="..."   # 勿打印 / 勿写入报告
-export PLUMELOG_AUTO_LOGIN=1             # 或命令加 --auto-login
-plumelog query search --app demo -q timeout --auto-login
-`
-
-约束：
-
-- 密码只从 PLUMELOG_LOGIN_PASSWORD（用户名还可来自 config login_username）读取；
-- **只重试一次**；再 401 原样报错；
-- 走共享 HTTP client + cookie jar；dry-run / uth login 自身不触发；
-- 密码永不落入日志、dry-run、错误信封（与现有脱敏一致）。
-
 ## 配置优先级
 
 `flags > environment > config.json > defaults`
@@ -188,3 +170,25 @@ plumelog skills install --dir "D:\custom\skills" --dry-run
 - [`references/output-and-risk.md`](references/output-and-risk.md)
 - 差距与 backlog：`docs/gap-vs-yunxiao.md`
 - 发版手跑：`docs/smoke-checklist.md`
+
+## 401 èªå¨éç»ï¼Issue #2ï¼opt-inï¼
+
+Session Cookie å¯è½æ°å°æ¶å¤±æãéä¸æ¸¸ `code:401` / HTTP 401 æ¶ï¼å¯éæ©èªå¨éç»**ä¸æ¬¡**å¹¶éæ¾åè¯·æ±ï¼
+
+```bash
+export PLUMELOG_LOGIN_USERNAME="..."
+export PLUMELOG_LOGIN_PASSWORD="..."   # å¿æå° / å¿åå
+¥æ¥å
+export PLUMELOG_AUTO_LOGIN=1             # æå½ä»¤å  --auto-login
+plumelog query search --app demo -q timeout --auto-login
+```
+
+çº¦æï¼
+
+- å¯ç åªä» `PLUMELOG_LOGIN_PASSWORD`ï¼ç¨æ·åè¿å¯æ¥èª config `login_username`ï¼è¯»åï¼
+- **åªéè¯ä¸æ¬¡**ï¼å 401 åæ ·æ¥éï¼
+- èµ°å
+±äº« HTTP client + cookie jarï¼dry-run / `auth login` èªèº«ä¸è§¦åï¼
+- å¯ç æ°¸ä¸è½å
+¥æ¥å¿ãdry-runãéè¯¯ä¿¡å°ï¼ä¸ç°æè±æè§åä¸è´ï¼ã
+

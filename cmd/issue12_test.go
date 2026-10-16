@@ -146,3 +146,45 @@ func TestAutoLoginOnlyOnce(t *testing.T) {
 		t.Fatalf("%s", out)
 	}
 }
+
+func TestSearchContentWildcardPreservesStructured(t *testing.T) {
+	for _, q := range []string{"timeout AND retry", "field:value.with.dots"} {
+		out, err := run(t, "query", "search",
+			"--dry-run",
+			"--base-url", "http://127.0.0.1:9",
+			"-q", q,
+			"--content-wildcard",
+			"--from-time", "1700000000000",
+			"--to-time", "1700003600000",
+		)
+		if err != nil {
+			t.Fatal(err, out)
+		}
+		if strings.Contains(out, "*"+q+"*") {
+			t.Fatalf("force wrapped structured %q: %s", q, out)
+		}
+		if !strings.Contains(out, q) {
+			t.Fatalf("missing original query %q: %s", q, out)
+		}
+	}
+}
+
+func TestSearchNoContentAutoWildcard(t *testing.T) {
+	out, err := run(t, "query", "search",
+		"--dry-run",
+		"--base-url", "http://127.0.0.1:9",
+		"-q", "java.lang.OutOfMemoryError",
+		"--no-content-auto-wildcard",
+		"--from-time", "1700000000000",
+		"--to-time", "1700003600000",
+	)
+	if err != nil {
+		t.Fatal(err, out)
+	}
+	if strings.Contains(out, "*java.lang.OutOfMemoryError*") {
+		t.Fatalf("auto wrap should be disabled: %s", out)
+	}
+	if !strings.Contains(out, "java.lang.OutOfMemoryError") {
+		t.Fatalf("%s", out)
+	}
+}
