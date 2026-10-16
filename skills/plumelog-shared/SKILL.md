@@ -1,6 +1,6 @@
 ---
 name: plumelog-shared
-version: 0.1.0
+version: 0.1.1
 description: "Use for plumelog CLI setup/auth: auth login/status/logout, config, doctor, JSON ok/result envelope, --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 100 + confirmation_required, yunxiao-aligned; dual --admin-password), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:
@@ -54,6 +54,25 @@ Cookie jar 默认：
 | Unix | `$XDG_CONFIG_HOME/plumelog/cookies.txt` 或 `~/.config/plumelog/cookies.txt` |
 
 覆盖：`--cookie-jar`。`auth status` / `doctor` / `config show` **只**报元数据，不打印 Cookie 值。
+
+
+## 401 自动重登（Issue #2，opt-in）
+
+Session Cookie 可能数小时失效。遇上游 code:401 / HTTP 401 时，可选择自动重登**一次**并重放原请求：
+
+`ash
+export PLUMELOG_LOGIN_USERNAME="..."
+export PLUMELOG_LOGIN_PASSWORD="..."   # 勿打印 / 勿写入报告
+export PLUMELOG_AUTO_LOGIN=1             # 或命令加 --auto-login
+plumelog query search --app demo -q timeout --auto-login
+`
+
+约束：
+
+- 密码只从 PLUMELOG_LOGIN_PASSWORD（用户名还可来自 config login_username）读取；
+- **只重试一次**；再 401 原样报错；
+- 走共享 HTTP client + cookie jar；dry-run / uth login 自身不触发；
+- 密码永不落入日志、dry-run、错误信封（与现有脱敏一致）。
 
 ## 配置优先级
 

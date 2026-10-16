@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -26,6 +27,7 @@ type App struct {
 	flagJQ            string
 	flagDryRun        bool
 	flagYes           bool
+	flagAutoLogin     bool
 	flagAdminPassword string
 	flagPathPrefix    string
 	flagCookieJar     string
@@ -37,6 +39,7 @@ type App struct {
 	jq            string
 	dryRun        bool
 	yes           bool
+	autoLogin     bool
 	adminPassword string
 	prefixMode    string
 	timeout       time.Duration
@@ -118,6 +121,7 @@ Discovery:
 	p.StringVar(&a.flagJQ, "jq", "", "jq expression applied to the JSON envelope")
 	p.BoolVar(&a.flagDryRun, "dry-run", false, "print the request and do not send it")
 	p.BoolVarP(&a.flagYes, "yes", "y", false, "confirm a high-risk-write")
+	p.BoolVar(&a.flagAutoLogin, "auto-login", false, "on 401, silent login once from PLUMELOG_LOGIN_* env and replay (env PLUMELOG_AUTO_LOGIN=1)")
 	p.StringVar(&a.flagAdminPassword, "admin-password", "", "admin password for deleteQueue/deleteIndex (env PLUMELOG_ADMIN_PASSWORD); never printed")
 	p.StringVar(&a.flagPathPrefix, "path-prefix", "auto", `path prefix: auto, "" (or root), or /plumelog`)
 	p.StringVar(&a.flagCookieJar, "cookie-jar", "", "override the Netscape cookie jar path")
@@ -266,6 +270,7 @@ func (a *App) resolveInto(cmd *cobra.Command) error {
 	a.jq = a.flagJQ
 	a.dryRun = a.flagDryRun
 	a.yes = a.flagYes
+	a.autoLogin = a.flagAutoLogin || envTruthy("PLUMELOG_AUTO_LOGIN")
 
 	admin := os.Getenv("PLUMELOG_ADMIN_PASSWORD")
 	if changed(cmd, "admin-password") {
@@ -448,6 +453,15 @@ func (a *App) invoke(cmd *cobra.Command, policy risk.Policy, req client.Request)
 	if err != nil {
 		return err
 	}
+	if a.autoLogin && !a.dryRun && isUnauthorized(resp) && !isLoginRequest(req) {
+		if err := a.silentLogin(cmd); err != nil {
+			return err
+		}
+		resp, err = a.do(cmd, req)
+		if err != nil {
+			return err
+		}
+	}
 	return a.finishUpstream(cmd, resp)
 }
 
@@ -493,6 +507,63 @@ func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response) error {
 		env.Hint = "server returned an empty body (often no matching index)"
 	}
 	return a.write(cmd, env)
+}
+
+func envTruthy(name string) bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv(name)))
+	switch v {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+func isUnauthorized(resp client.Response) bool {
+	if code, ok := client.ResultCode(resp.Body); ok && code == 401 {
+		return true
+	}
+	return resp.Status == 401
+}
+
+func isLoginRequest(req client.Request) bool {
+	p := strings.TrimSuffix(req.Path, "/")
+	return p == "/login" || strings.HasSuffix(p, "/login")
+}
+
+// silentLogin POSTs /login once using env/config credentials. Password is never printed.
+func (a *App) silentLogin(cmd *cobra.Command) error {
+	user := strings.TrimSpace(os.Getenv("PLUMELOG_LOGIN_USERNAME"))
+	if user == "" {
+		user = strings.TrimSpace(a.cfg.LoginUsername)
+	}
+	pass := os.Getenv("PLUMELOG_LOGIN_PASSWORD")
+	if user == "" || pass == "" {
+		return a.fail(cmd, risk.Write, errors.New("auto-login requires PLUMELOG_LOGIN_USERNAME and PLUMELOG_LOGIN_PASSWORD"))
+	}
+	a.track(pass)
+	body, err := json.Marshal(map[string]string{"username": user, "password": pass})
+	if err != nil {
+		return a.fail(cmd, risk.Write, err)
+	}
+	if a.client == nil {
+		return a.fail(cmd, risk.Write, errors.New("HTTP client is not configured"))
+	}
+	resp, err := a.client.Do(cmd.Context(), client.Request{Method: "POST", Path: "/login", Body: body})
+	if err != nil {
+		return a.fail(cmd, risk.Write, fmt.Errorf("auto-login failed: %v", err))
+	}
+	if code, ok := client.ResultCode(resp.Body); ok && code == 402 {
+		_ = a.jar.Clear()
+		return a.fail(cmd, risk.Write, errors.New("auto-login invalid credentials (402)"))
+	}
+	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
+		return a.fail(cmd, risk.Write, fmt.Errorf("auto-login server returned code %d", code))
+	}
+	if resp.Status >= 400 {
+		return a.fail(cmd, risk.Write, fmt.Errorf("auto-login HTTP %d", resp.Status))
+	}
+	return nil
 }
 
 func (a *App) cookieNames() []string {

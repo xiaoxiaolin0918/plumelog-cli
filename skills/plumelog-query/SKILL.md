@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.0
+version: 0.1.1
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -52,5 +52,25 @@ plumelog query dsl --file query.json
 | `--index` / `--range day\|week\|month` | 改走 `POST /query` |
 
 未写时间时用 `default_time_window`（默认 1h）选日索引。运行日志索引形如 `plume_log_run_YYYYMMDD`。
+
+
+## -q / --content 分词陷阱（Issue #1）
+
+-q 走 ES query_string（default_field: content）。standard analyzer 会把
+java.lang.OutOfMemoryError 切成**单个 token**；只搜 OutOfMemoryError 或未通配的类名片段会**恒 0 命中**，
+排查事故时极易误判「无报错」。
+
+| 写法 | 行为 |
+|------|------|
+| -q OutOfMemoryError | 可能漏报（无 .、无通配） |
+| -q java.lang.OutOfMemoryError | CLI **自动**包成 *java.lang.OutOfMemoryError* |
+| -q OutOfMemoryError --content-wildcard | 强制包成 *OutOfMemoryError* |
+| -q '*OutOfMemoryError*' | 已有通配，CLI 不改写 |
+| -q 'timeout AND retry' | 结构化 query_string，**不**自动包通配 |
+
+`ash
+plumelog query search -q OutOfMemoryError --content-wildcard --size 1 --jq '.result.hits.total'
+plumelog query search -q 'java.lang.OutOfMemoryError' --size 1 --jq '.result.hits.total'
+`
 
 成功看 `ok` + `result`（ES 响应常在 `result.hits`）。可用 `--jq .result.hits.hits`。

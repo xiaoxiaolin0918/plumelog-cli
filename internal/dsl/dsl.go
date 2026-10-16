@@ -11,19 +11,20 @@ import (
 
 // Search is the shortcut filter set from `query search` / `trace get`.
 type Search struct {
-	App        string
-	ExcludeApp bool
-	Env        string
-	Level      string
-	TraceID    string
-	ClassName  string
-	ServerName string
-	Content    string
-	Extend     []string
-	FromMS     int64
-	ToMS       int64
-	Sort       string
-	Highlight  bool
+	App             string
+	ExcludeApp      bool
+	Env             string
+	Level           string
+	TraceID         string
+	ClassName       string
+	ServerName      string
+	Content         string
+	ContentWildcard bool // --content-wildcard: wrap -q as *value*
+	Extend          []string
+	FromMS          int64
+	ToMS            int64
+	Sort            string
+	Highlight       bool
 }
 
 // Build returns the clientQuery/query JSON body.
@@ -76,7 +77,7 @@ func Build(s Search) ([]byte, error) {
 		}
 		must = append(must, matchPhrase(field, value))
 	}
-	if v := strings.TrimSpace(s.Content); v != "" {
+	if v := NormalizeContent(s.Content, s.ContentWildcard); v != "" {
 		must = append(must, map[string]any{
 			"query_string": map[string]any{
 				"query":         v,
@@ -279,6 +280,43 @@ func ResolveWindow(fromRaw, toRaw string, window time.Duration, now time.Time) (
 		return 0, 0, fmt.Errorf("from-time is after to-time")
 	}
 	return from.UnixMilli(), to.UnixMilli(), nil
+}
+
+
+// NormalizeContent prepares -q / --content for ES query_string.
+// Standard analysis indexes dotted identifiers (e.g. java.lang.OutOfMemoryError)
+// as one token; a bare fragment like OutOfMemoryError then misses. When
+// forceWildcard is set, or the value looks like a single dotted identifier
+// without wildcards, wrap it as *value* so wildcard matching can hit.
+func NormalizeContent(content string, forceWildcard bool) string {
+	v := strings.TrimSpace(content)
+	if v == "" {
+		return ""
+	}
+	if strings.ContainsAny(v, "*?") {
+		return v
+	}
+	if forceWildcard || isDottedIdentifier(v) {
+		return "*" + v + "*"
+	}
+	return v
+}
+
+func isDottedIdentifier(s string) bool {
+	if !strings.Contains(s, ".") {
+		return false
+	}
+	// Structured query_string expressions keep their original form.
+	upper := strings.ToUpper(s)
+	for _, op := range []string{" AND ", " OR ", " NOT ", "&&", "||"} {
+		if strings.Contains(upper, op) {
+			return false
+		}
+	}
+	if strings.ContainsAny(s, " \t\r\n\"':()[]{}\\/") {
+		return false
+	}
+	return true
 }
 
 // AppNamesAgg is the Home.vue queryAppNames body.
