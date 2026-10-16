@@ -28,6 +28,8 @@ type searchFlags struct {
 	class, className   string
 	server, serverName string
 	content            string
+	contentWildcard         bool
+	noContentAutoWildcard  bool
 	extend             []string
 	fromTime, toTime   string
 	size               int
@@ -58,6 +60,11 @@ func (a *App) newSearchCmd() *cobra.Command {
 Shortcut filters become match_phrase clauses (appName, env, logLevel, traceId,
 className, serverName), a query_string on content, match_phrase extend fields,
 and a dtTime range. --exclude-app moves appName into must_not.
+A dotted -q identifier (e.g. java.lang.OutOfMemoryError) is auto-wrapped as *...* so
+ES wildcards can match the analyzed token; use --content-wildcard to force *value*
+for bare fragments like OutOfMemoryError. Structured query_string (AND/OR, field:value,
+quotes) is never wrapped, even with --content-wildcard. Use --no-content-auto-wildcard
+to keep dotted identifiers literal.
 Default sort is dtTime desc. A traceId switches sort to dtTime asc, seq asc.
 Highlight is on unless --no-highlight.
 
@@ -159,7 +166,9 @@ func bindSearchFlags(cmd *cobra.Command, f *searchFlags) {
 	cmd.Flags().StringVar(&f.className, "class-name", "", "alias of --class")
 	cmd.Flags().StringVar(&f.server, "server", "", "serverName match_phrase")
 	cmd.Flags().StringVar(&f.serverName, "server-name", "", "alias of --server")
-	cmd.Flags().StringVarP(&f.content, "content", "q", "", "query_string on content")
+	cmd.Flags().StringVarP(&f.content, "content", "q", "", "query_string on content; dotted identifiers auto-wrap as *value* (see --content-wildcard / --no-content-auto-wildcard)")
+	cmd.Flags().BoolVar(&f.contentWildcard, "content-wildcard", false, "wrap bare -q as *value* for ES wildcard matching; structured query_string (AND/OR, field:value, quotes) is left unchanged")
+	cmd.Flags().BoolVar(&f.noContentAutoWildcard, "no-content-auto-wildcard", false, "disable automatic *...* wrapping for dotted -q identifiers")
 	cmd.Flags().StringArrayVar(&f.extend, "extend", nil, "repeatable field=value match_phrase for an extend/MDC field")
 	cmd.Flags().StringVar(&f.fromTime, "from-time", "", "range dtTime gte and clientStartDate (ms or RFC3339)")
 	cmd.Flags().StringVar(&f.toTime, "to-time", "", "range dtTime lt and clientEndDate; future values clamp to now")
@@ -225,8 +234,10 @@ func (a *App) planSearch(cmd *cobra.Command, f searchFlags, forceTrace bool, siz
 			TraceID:    f.traceID,
 			ClassName:  f.class,
 			ServerName: f.server,
-			Content:    f.content,
-			Extend:     f.extend,
+			Content:         f.content,
+			ContentWildcard:       f.contentWildcard,
+			NoContentAutoWildcard: f.noContentAutoWildcard,
+			Extend:          f.extend,
 			FromMS:     fromMS,
 			ToMS:       toMS,
 			Sort:       f.sort,

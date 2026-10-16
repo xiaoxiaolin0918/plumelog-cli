@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.0
+version: 0.1.1
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -42,7 +42,10 @@ plumelog query dsl --file query.json
 | `--trace-id` | `match_phrase` `traceId`；排序改 `dtTime asc, seq asc` |
 | `--class` / `--class-name` | `match_phrase` `className` |
 | `--server` / `--server-name` | `match_phrase` `serverName` |
-| `-q` / `--content` | `query_string` on `content` |
+| `-q` / `--content` | `query_string` on `content`ï¼å« `.` èªå¨ `*...*`ï¼`--content-wildcard` å¼ºå¶å
+è£¸çæ®µï¼ç»æåä¸å
+ï¼ï¼`--no-content-auto-wildcard` å
+³èªå¨ |
 | `--extend field=value`（可重复） | `match_phrase` 扩展/MDC 字段 |
 | `--from-time` / `--to-time` | `range` on `dtTime` + clientStart/EndDate；未来 `to` 夹到 now |
 | `--size` / `--from` | 分页（默认 size 100 或 config `default_size`） |
@@ -53,4 +56,35 @@ plumelog query dsl --file query.json
 
 未写时间时用 `default_time_window`（默认 1h）选日索引。运行日志索引形如 `plume_log_run_YYYYMMDD`。
 
-成功看 `ok` + `result`（ES 响应常在 `result.hits`）。可用 `--jq .result.hits.hits`。
+## `-q` / `--content` åè¯é·é±ï¼Issue #1ï¼
+
+`-q` èµ° ES `query_string`ï¼`default_field: content`ï¼ãstandard analyzer ä¼æ
+`java.lang.OutOfMemoryError` åæ**åä¸ª token**ï¼åªæ `OutOfMemoryError` ææªéé
+çç±»åçæ®µä¼**æ 0 å½ä¸­**ï¼
+ææ¥äºæ
+æ¶ææè¯¯å¤ãæ æ¥éãã
+
+| åæ³ | è¡ä¸º |
+|------|------|
+| `-q OutOfMemoryError` | å¯è½æ¼æ¥ï¼æ  `.`ãæ éé
+ï¼ |
+| `-q java.lang.OutOfMemoryError` | CLI **èªå¨**å
+æ `*java.lang.OutOfMemoryError*` |
+| `-q OutOfMemoryError --content-wildcard` | å¼ºå¶å
+æ `*OutOfMemoryError*`ï¼`AND` / `field:value` ç­ç»æå **ä¸**å
+ï¼ |
+| `-q '*OutOfMemoryError*'` | å·²æéé
+ï¼CLI ä¸æ¹å |
+| `-q java.lang.OutOfMemoryError --no-content-auto-wildcard` | å
+³é­ dotted èªå¨éé
+ |
+| `-q 'timeout AND retry'` å³ä½¿å¸¦ `--content-wildcard` | ç»æå query_stringï¼**æ°¸ä¸**å
+éé
+ |
+
+```bash
+plumelog query search -q OutOfMemoryError --content-wildcard --size 1 --jq '.result.hits.total'
+plumelog query search -q 'java.lang.OutOfMemoryError' --size 1 --jq '.result.hits.total'
+plumelog query search -q 'java.lang.OutOfMemoryError' --no-content-auto-wildcard --size 1
+```
+

@@ -1,6 +1,6 @@
 ---
 name: plumelog-shared
-version: 0.1.0
+version: 0.1.1
 description: "Use for plumelog CLI setup/auth: auth login/status/logout, config, doctor, JSON ok/result envelope, --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 100 + confirmation_required, yunxiao-aligned; dual --admin-password), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:
@@ -54,6 +54,7 @@ Cookie jar 默认：
 | Unix | `$XDG_CONFIG_HOME/plumelog/cookies.txt` 或 `~/.config/plumelog/cookies.txt` |
 
 覆盖：`--cookie-jar`。`auth status` / `doctor` / `config show` **只**报元数据，不打印 Cookie 值。
+
 
 ## 配置优先级
 
@@ -169,3 +170,25 @@ plumelog skills install --dir "D:\custom\skills" --dry-run
 - [`references/output-and-risk.md`](references/output-and-risk.md)
 - 差距与 backlog：`docs/gap-vs-yunxiao.md`
 - 发版手跑：`docs/smoke-checklist.md`
+
+## 401 èªå¨éç»ï¼Issue #2ï¼opt-inï¼
+
+Session Cookie å¯è½æ°å°æ¶å¤±æãéä¸æ¸¸ `code:401` / HTTP 401 æ¶ï¼å¯éæ©èªå¨éç»**ä¸æ¬¡**å¹¶éæ¾åè¯·æ±ï¼
+
+```bash
+export PLUMELOG_LOGIN_USERNAME="..."
+export PLUMELOG_LOGIN_PASSWORD="..."   # å¿æå° / å¿åå
+¥æ¥å
+export PLUMELOG_AUTO_LOGIN=1             # æå½ä»¤å  --auto-login
+plumelog query search --app demo -q timeout --auto-login
+```
+
+çº¦æï¼
+
+- å¯ç åªä» `PLUMELOG_LOGIN_PASSWORD`ï¼ç¨æ·åè¿å¯æ¥èª config `login_username`ï¼è¯»åï¼
+- **åªéè¯ä¸æ¬¡**ï¼å 401 åæ ·æ¥éï¼
+- èµ°å
+±äº« HTTP client + cookie jarï¼dry-run / `auth login` èªèº«ä¸è§¦åï¼
+- å¯ç æ°¸ä¸è½å
+¥æ¥å¿ãdry-runãéè¯¯ä¿¡å°ï¼ä¸ç°æè±æè§åä¸è´ï¼ã
+

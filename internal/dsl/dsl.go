@@ -11,19 +11,21 @@ import (
 
 // Search is the shortcut filter set from `query search` / `trace get`.
 type Search struct {
-	App        string
-	ExcludeApp bool
-	Env        string
-	Level      string
-	TraceID    string
-	ClassName  string
-	ServerName string
-	Content    string
-	Extend     []string
-	FromMS     int64
-	ToMS       int64
-	Sort       string
-	Highlight  bool
+	App                   string
+	ExcludeApp            bool
+	Env                   string
+	Level                 string
+	TraceID               string
+	ClassName             string
+	ServerName            string
+	Content               string
+	ContentWildcard       bool // --content-wildcard: wrap bare -q as *value* (structured queries untouched)
+	NoContentAutoWildcard bool // --no-content-auto-wildcard: disable dotted auto-wrap
+	Extend                []string
+	FromMS                int64
+	ToMS                  int64
+	Sort                  string
+	Highlight             bool
 }
 
 // Build returns the clientQuery/query JSON body.
@@ -76,7 +78,7 @@ func Build(s Search) ([]byte, error) {
 		}
 		must = append(must, matchPhrase(field, value))
 	}
-	if v := strings.TrimSpace(s.Content); v != "" {
+	if v := NormalizeContent(s.Content, s.ContentWildcard, s.NoContentAutoWildcard); v != "" {
 		must = append(must, map[string]any{
 			"query_string": map[string]any{
 				"query":         v,
