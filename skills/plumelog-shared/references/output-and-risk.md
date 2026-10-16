@@ -1,45 +1,40 @@
-# Output contract & high-risk approval (plumelog)
+# Output contract & high-risk approval
 
 ## Success vs failure
 
 - Success: stdout JSON with `ok: true`, payload under **`result`** (not `data`), exit 0.
-- Failure: usually stdout JSON with `ok: false` and **`error` as a string**; exit ≠ 0 (currently **1** for gates, not 10).
-- Agents must branch on `ok` or exit code — never on upstream PlumeLog `code == 0`.
+- Ordinary failure: usually stdout JSON with `ok: false` and **`error` as a string**; exit 1.
+- Confirmation gate: stdout JSON with `ok: false` and **`error` as an object**; exit **10**.
+- Agents must branch on `ok` / exit code / `error.subtype` — never on upstream PlumeLog `code == 0`.
 
 ## Dry-run
 
 ```bash
-plumelog admin queue clear --dry-run
-plumelog api POST /deleteQueue --dry-run
+plumelog admin queue clear --dry-run --admin-password "$PLUMELOG_ADMIN_PASSWORD"
 ```
 
 Returns `ok: true`, `dry_run: true`, redacted URL/headers, optional `would_require`. Does **not** send, even with `--yes`.
 
-## High-risk gate (current)
+## Exit 10 (`confirmation_required`)
 
-Missing `--yes` / `--admin-password`:
+Missing `--yes` and/or required `--admin-password` (real run, not dry-run):
 
 ```json
-{"ok":false,"risk":"high-risk-write","error":"refusing high-risk-write without --yes and --admin-password"}
+{
+  "ok": false,
+  "risk": "high-risk-write",
+  "hint": "add --yes to confirm",
+  "error": {
+    "type": "confirmation",
+    "subtype": "confirmation_required",
+    "message": "refusing high-risk-write without --yes",
+    "hint": "add --yes to confirm",
+    "risk": "high-risk-write",
+    "action": "admin index reset"
+  }
+}
 ```
 
-Exit **1**. No `error.subtype`, no `confirmation_required`, no structured `hint`/`action` yet.
+Aligned with yunxiao: stop, ask the user, then retry with `--yes` (and `--admin-password` when the command needs it) only after explicit consent. This is **not** a network/auth error.
 
-**Do not** treat this like yunxiao exit 10 until CLI is changed. Stop, ask the user, then retry with `--yes` (and admin password when required) only after explicit consent.
-
-## Dual gate
-
-| Command | Needs `--yes` | Needs `--admin-password` (sent as `adminPassWord`) |
-|---------|---------------|-----------------------------------------------------|
-| `admin queue clear` | yes | yes |
-| `admin index delete` | yes | yes |
-| `admin index reset` | yes | no (not sent) |
-| `admin delete-by-query` | yes | no (not sent) |
-| `alarm delete` | yes | no |
-| `app extend del` | yes | no |
-| `api` → deleteQueue/deleteIndex | yes | yes |
-| `api` → resetIndex/deleteByQuery/deleteWarningRule/delExtendfield | yes | no |
-
-## Secrets
-
-Never print login password, admin password, or cookie values. Prefer env vars; `config set` refuses password keys; dry-run redacts Cookie and `adminPassWord`.
+Dual admin gate: `admin queue clear` / `admin index delete` (and matching `api` paths) also require `--admin-password`; the hint names both flags when both are missing.

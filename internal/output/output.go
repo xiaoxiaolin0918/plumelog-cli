@@ -18,7 +18,7 @@ type Envelope struct {
 	OK           bool              `json:"ok"`
 	DryRun       bool              `json:"dry_run,omitempty"`
 	Risk         string            `json:"risk,omitempty"`
-	Error        string            `json:"error,omitempty"`
+	Error        any               `json:"error,omitempty"`
 	Hint         string            `json:"hint,omitempty"`
 	Method       string            `json:"method,omitempty"`
 	URL          string            `json:"url,omitempty"`
@@ -29,6 +29,59 @@ type Envelope struct {
 	CookieNames  []string          `json:"cookie_names,omitempty"`
 	WouldRequire []string          `json:"would_require,omitempty"`
 	Result       json.RawMessage   `json:"result,omitempty"`
+}
+
+// ErrorBody is the structured failure payload (aligned with yunxiao).
+type ErrorBody struct {
+	Type    string `json:"type"`
+	Subtype string `json:"subtype,omitempty"`
+	Message string `json:"message"`
+	Hint    string `json:"hint,omitempty"`
+	Risk    string `json:"risk,omitempty"`
+	Action  string `json:"action,omitempty"`
+}
+
+// ErrorMessage extracts a human message from Envelope.Error (string or ErrorBody).
+func ErrorMessage(v any) string {
+	switch e := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return e
+	case ErrorBody:
+		return e.Message
+	case *ErrorBody:
+		if e == nil {
+			return ""
+		}
+		return e.Message
+	default:
+		return fmt.Sprint(e)
+	}
+}
+
+// ScrubError returns a copy of Error with secret substrings redacted.
+func ScrubError(v any, scrub func(string) string) any {
+	switch e := v.(type) {
+	case string:
+		return scrub(e)
+	case ErrorBody:
+		e.Message = scrub(e.Message)
+		e.Hint = scrub(e.Hint)
+		e.Action = scrub(e.Action)
+		return e
+	case *ErrorBody:
+		if e == nil {
+			return v
+		}
+		cp := *e
+		cp.Message = scrub(cp.Message)
+		cp.Hint = scrub(cp.Hint)
+		cp.Action = scrub(cp.Action)
+		return &cp
+	default:
+		return v
+	}
 }
 
 // Write formats env as json, pretty, or a best-effort table, then scrubs secrets.

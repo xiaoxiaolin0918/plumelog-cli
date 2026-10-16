@@ -1,7 +1,7 @@
 ---
 name: plumelog-shared
 version: 0.1.0
-description: "Use for plumelog CLI setup/auth: auth login/status/logout, config, doctor, JSON ok/result envelope, --dry-run/--jq/--yes/--admin-password, high-risk gate (current exit 1 + string error; not yet yunxiao exit 10 + confirmation_required), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
+description: "Use for plumelog CLI setup/auth: auth login/status/logout, config, doctor, JSON ok/result envelope, --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 100 + confirmation_required, yunxiao-aligned; dual --admin-password), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:
     bins: ["plumelog"]
@@ -18,7 +18,7 @@ metadata:
 
 1. **调用前先确认用法**：读对应域 skill，或跑 `plumelog <cmd> --help`；帮助里标有 Risk：`read` | `write` | `high-risk-write`。
 2. **默认 JSON**：判断成功用 **`ok == true`**（或进程退出码 0）。**不要**用上游 PlumeLog 的 `code == 0`。成功负载在 **`result`**（不是 yunxiao 的 `data`）。
-3. **失败信封**：当前多为 stdout 上的 `{ "ok": false, "error": "<string>", "risk": "..." }`；`error` 是 **扁平 string**，不是对象。
+3. **失败信封**：当前多为 stdout 上的 `{ "ok": false, "error": "<string>", "risk": "..." }`；`error` 是 **confirmation_required 对象（或普通失败时的 string）**，不是对象。
 4. **禁止**把登录密码、`adminPassWord`、Session Cookie 值写入终端、回复、报告或 skill 示例。只用 `has_cookie` / `cookie_path` / 打码后的 dry-run。
 
 ## 认证（Session Cookie，非 Bearer）
@@ -118,13 +118,13 @@ dry-run 成功例：
 
 实测（2026-10-16）：
 
-- 缺 `--yes`（及缺 admin 时）：**exit 1**，stdout 扁平 string error，例如  
-  `{"ok":false,"risk":"high-risk-write","error":"refusing high-risk-write without --yes and --admin-password"}`
-- **尚未**对齐 yunxiao：`exit 10` + `error: { type, subtype: "confirmation_required", hint, action }`
+- 缺 `--yes`（及缺 admin 时）：**exit 10**，stdout confirmation_required 对象（或普通失败时的 string） error，例如  
+  exit **10** with error.subtype=`confirmation_required` (see references/output-and-risk.md)
+- ****已**对齐 yunxiao：`exit 100` + `error: { type, subtype: "confirmation_required", hint, action }`
 
 Agent 流程：识别 `ok==false` 且 `risk==high-risk-write`（或 error 含 `refusing high-risk-write`）→ **向用户展示 action/风险并等待同意** → 同意后把 `--yes`（及需要的 `--admin-password`）追加到原 argv 重试。**禁止**静默加 `--yes`。
 
-对齐 exit 10 + `confirmation_required` 列为 P0 产品债（见 `docs/gap-vs-yunxiao.md`）；在未改 CLI 前，skill/脚本勿按 yunxiao 解析。
+对齐 exit 100 + `confirmation_required` 列为 P0 产品债（见 `docs/gap-vs-yunxiao.md`）；在未改 CLI 前，skill/脚本勿按 yunxiao 解析。
 
 `--dry-run`：只预览；即使带 `--yes` 也不发网；预览脱敏 Cookie / adminPassWord。
 

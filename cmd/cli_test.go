@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"encoding/json"
 	"io"
 	"net"
@@ -11,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"plumelog-cli/internal/risk"
 )
 
 func TestCommandTreeRisk(t *testing.T) {
@@ -171,11 +174,43 @@ func TestHighRiskDryRunDoesNotSendOrLeakPassword(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected refusal")
 	}
-	if strings.Contains(refused, "hunter2secret") || !strings.Contains(refused, "high-risk-write") {
+	var pe *PrintedError
+	if !errors.As(err, &pe) || pe.ExitCode() != risk.ExitConfirmationRequired {
+		t.Fatalf("want exit 10 PrintedError, got %v", err)
+	}
+	if strings.Contains(refused, "hunter2secret") || !strings.Contains(refused, "confirmation_required") {
+		t.Fatalf("%s", refused)
+	}
+	if !strings.Contains(refused, "\"type\":\"confirmation\"") || !strings.Contains(refused, "admin queue clear") {
 		t.Fatalf("%s", refused)
 	}
 	if strings.Contains(refused, "connection refused") || strings.Contains(refused, "request failed") {
 		t.Fatalf("gate should not send: %s", refused)
+	}
+}
+
+func TestConfirmationGateExit10WithoutAdmin(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+	out, err := run(t, "admin", "index", "reset",
+		"--base-url", "http://"+addr,
+		"--index", "plume_log_run_20240101")
+	if err == nil {
+		t.Fatal("expected refusal")
+	}
+	var pe *PrintedError
+	if !errors.As(err, &pe) || pe.ExitCode() != risk.ExitConfirmationRequired {
+		t.Fatalf("want exit 10, got %v", err)
+	}
+	if !strings.Contains(out, "confirmation_required") || !strings.Contains(out, "add --yes to confirm") {
+		t.Fatalf("%s", out)
+	}
+	if !strings.Contains(out, "admin index reset") {
+		t.Fatalf("missing action: %s", out)
 	}
 }
 

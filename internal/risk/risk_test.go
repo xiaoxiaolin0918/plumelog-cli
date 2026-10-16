@@ -4,20 +4,32 @@ import "testing"
 
 func TestHighRiskGate(t *testing.T) {
 	p := HighRisk(true, true)
-	if err := p.Check(false, "secret"); err == nil || !contains(err.Error(), "high-risk-write") {
+	err := p.Check(false, "secret", "admin queue clear")
+	if err == nil || !contains(err.Error(), "high-risk-write") {
 		t.Fatalf("%v", err)
 	}
-	if err := p.Check(true, ""); err == nil || !contains(err.Error(), "--admin-password") {
+	g, ok := err.(GateResult)
+	if !ok || g.Action != "admin queue clear" || g.Hint == "" {
+		t.Fatalf("%#v", err)
+	}
+	if !IsConfirmation(err) {
+		t.Fatal("expected confirmation")
+	}
+	err = p.Check(true, "", "admin queue clear")
+	if err == nil || !contains(err.Error(), "--admin-password") {
 		t.Fatalf("%v", err)
 	}
-	if err := p.Check(true, "secret"); err != nil {
+	if err := p.Check(true, "secret", "admin queue clear"); err != nil {
 		t.Fatal(err)
 	}
 	if got := p.Missing(false, ""); len(got) != 2 {
 		t.Fatalf("%v", got)
 	}
-	if err := ReadOnly().Check(false, ""); err != nil {
+	if err := ReadOnly().Check(false, "", "doctor"); err != nil {
 		t.Fatal(err)
+	}
+	if ExitConfirmationRequired != 10 {
+		t.Fatalf("exit code must be 10, got %d", ExitConfirmationRequired)
 	}
 }
 
@@ -37,6 +49,19 @@ func TestForAPI(t *testing.T) {
 	}
 	if ForAPI("POST", "/resetIndex").NeedAdmin {
 		t.Fatal("resetIndex does not require admin password")
+	}
+}
+
+func TestHintForMissing(t *testing.T) {
+	if hintForMissing([]string{"--yes"}) != "add --yes to confirm" {
+		t.Fatal("yes")
+	}
+	if !contains(hintForMissing([]string{"--admin-password"}), "--admin-password") {
+		t.Fatal("admin")
+	}
+	h := hintForMissing([]string{"--yes", "--admin-password"})
+	if !contains(h, "--yes") || !contains(h, "--admin-password") {
+		t.Fatal(h)
 	}
 }
 

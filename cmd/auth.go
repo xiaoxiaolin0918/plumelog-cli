@@ -163,7 +163,7 @@ func (a *App) newLogoutCmd() *cobra.Command {
 			if err := a.write(cmd, env); err != nil {
 				return err
 			}
-			return &PrintedError{Msg: env.Error}
+			return &PrintedError{Msg: output.ErrorMessage(env.Error)}
 		},
 	}
 	mark(cmd, risk.Write, "Log out and clear the local cookie jar")
@@ -197,7 +197,7 @@ func (a *App) newStatusCmd() *cobra.Command {
 				if werr := a.write(cmd, env); werr != nil {
 					return werr
 				}
-				return &PrintedError{Msg: env.Error}
+				return &PrintedError{Msg: output.ErrorMessage(env.Error)}
 			}
 			if code, ok := client.ResultCode(resp.Body); ok && code == 401 {
 				probeOut["ok"] = true
@@ -214,7 +214,7 @@ func (a *App) newStatusCmd() *cobra.Command {
 				if werr := a.write(cmd, env); werr != nil {
 					return werr
 				}
-				return &PrintedError{Msg: env.Error}
+				return &PrintedError{Msg: output.ErrorMessage(env.Error)}
 			}
 			probeOut["ok"] = true
 			probeOut["authenticated"] = true

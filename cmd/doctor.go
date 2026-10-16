@@ -71,7 +71,7 @@ Prints config path, cookie path, and the resolved path prefix. Cookie values are
 				if err := a.write(cmd, env); err != nil {
 					return err
 				}
-				return &PrintedError{Msg: env.Error}
+				return &PrintedError{Msg: output.ErrorMessage(env.Error)}
 			}
 			return a.write(cmd, env)
 		},

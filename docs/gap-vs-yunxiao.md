@@ -16,7 +16,7 @@
 | whoami | ✅ | ❌（用 `auth status` / `--probe`） |
 | config get/set/path/show | ✅ | ✅ |
 | `--dry-run` / `--jq` / `--yes` | ✅ | ✅ |
-| confirmation_required + exit 10 | ✅ | ❌ exit **1** + 扁平 string `error` |
+| confirmation_required + exit 10 | ✅ | ✅ exit **10** + `error.subtype=confirmation_required` |
 | profile / +onboard | ✅ | ❌ |
 | skills list/install + 随包 | ✅ | ⚠️ 仓内已有 `skills/`；**无** CLI 子命令 |
 | update / self-update | ✅ | ❌（`go build`） |
@@ -40,7 +40,7 @@
 
 - [x] **skills 底座**：`skills/plumelog-shared` + `references/output-and-risk.md`；域 skill：query / trace / app / alarm / admin / api；`skills/README.md`
 - [x] **skill 写清门禁现状**：exit 1 + 扁平 string；明确尚未对齐 yunxiao exit 10 + `confirmation_required`（见 shared）
-- [ ] **（产品债，二选一）对齐 confirmation 信封**：推荐改 CLI → exit **10** + `error: {type, subtype: confirmation_required, hint, action, risk}`，便于 Agent 稳定分支；或长期在 skill 声明「勿按 yunxiao 解析」（当前采用后者文档，前者待改代码）
+- [x] **确认门禁对齐**：推荐改 CLI → exit **10** + `error: {type, subtype: confirmation_required, hint, action, risk}`，便于 Agent 稳定分支；或长期在 skill 声明「勿按 yunxiao 解析」（已改 CLI 为 exit 10 + confirmation_required）
 - [x] **生产 URL / 凭据映射约定入 shared**：`http://plumelog.iipcloud.cn`；zhiyi-ops `.env` 的 `PLUMELOG_URL|USER|PASSWORD` → `PLUMELOG_BASE_URL|LOGIN_USERNAME|LOGIN_PASSWORD`（不落明文）
 
 ## P1

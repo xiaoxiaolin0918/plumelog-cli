@@ -59,7 +59,7 @@ func Main() int {
 	}
 	var pe *PrintedError
 	if errors.As(err, &pe) {
-		return 1
+		return pe.ExitCode()
 	}
 	fmt.Fprintln(os.Stderr, "Error:", err)
 	return 1
@@ -356,8 +356,8 @@ func (a *App) write(cmd *cobra.Command, env output.Envelope) error {
 	if a.format == "" {
 		a.format = "json"
 	}
-	if env.Error != "" {
-		env.Error = a.scrub(env.Error)
+	if env.Error != nil {
+		env.Error = output.ScrubError(env.Error, a.scrub)
 	}
 	if env.Hint != "" {
 		env.Hint = a.scrub(env.Hint)
@@ -382,6 +382,27 @@ func (a *App) fail(cmd *cobra.Command, level string, err error) error {
 	return &PrintedError{Msg: err.Error()}
 }
 
+func (a *App) failConfirmation(cmd *cobra.Command, g risk.GateResult) error {
+	body := output.ErrorBody{
+		Type:    "confirmation",
+		Subtype: "confirmation_required",
+		Message: g.Error(),
+		Hint:    g.Hint,
+		Risk:    g.Risk,
+		Action:  g.Action,
+	}
+	env := output.Envelope{OK: false, Error: body, Risk: g.Risk, Hint: g.Hint}
+	if werr := a.write(cmd, env); werr != nil {
+		return werr
+	}
+	return &PrintedError{Msg: body.Message, Code: risk.ExitConfirmationRequired}
+}
+
+func commandAction(cmd *cobra.Command) string {
+	path := strings.TrimSpace(cmd.CommandPath())
+	return strings.TrimSpace(strings.TrimPrefix(path, "plumelog"))
+}
+
 func (a *App) ok(cmd *cobra.Command, v any) error {
 	return a.write(cmd, output.Envelope{OK: true, Result: output.MustResult(v)})
 }
@@ -403,7 +424,10 @@ func (a *App) prepare(cmd *cobra.Command, policy risk.Policy, req *client.Reques
 		}
 		return true, nil
 	}
-	if err := policy.Check(a.yes, a.adminPassword); err != nil {
+	if err := policy.Check(a.yes, a.adminPassword, commandAction(cmd)); err != nil {
+		if g, ok := err.(risk.GateResult); ok {
+			return true, a.failConfirmation(cmd, g)
+		}
 		return true, a.fail(cmd, policy.Level, err)
 	}
 	return false, nil
@@ -449,7 +473,7 @@ func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response) error {
 		if err := a.write(cmd, env); err != nil {
 			return err
 		}
-		return &PrintedError{Msg: env.Error}
+		return &PrintedError{Msg: output.ErrorMessage(env.Error)}
 	}
 	if resp.Status >= 400 {
 		return a.fail(cmd, "", fmt.Errorf("HTTP %d from %s", resp.Status, client.RedactURL(resp.FinalURL)))
