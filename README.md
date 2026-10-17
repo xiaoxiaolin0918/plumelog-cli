@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.0)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1)
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
@@ -37,10 +37,10 @@ go test ./...
 **Go install (module path = repo):**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.0
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.1
 ```
 
-Release notes: [v0.1.0](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.0).
+Release notes: [v0.1.0](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1).
 
 ## Security (read this first)
 
