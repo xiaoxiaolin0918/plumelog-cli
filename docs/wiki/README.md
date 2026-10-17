@@ -1,4 +1,4 @@
-﻿# In-repo docs (`docs/wiki/`)
+# In-repo docs (`docs/wiki/`)
 
 These pages live **in this repository** under `docs/wiki/`. They are **not** the GitHub Wiki (`.wiki.git`). Browse them on GitHub or clone the repo.
 

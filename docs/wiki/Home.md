@@ -1,4 +1,4 @@
-﻿# plumelog-cli
+# plumelog-cli
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 

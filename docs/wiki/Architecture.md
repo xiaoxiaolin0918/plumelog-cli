@@ -1,4 +1,4 @@
-﻿# Architecture
+# Architecture
 
 Canonical in-repo document (this page is a short index):
 

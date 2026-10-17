@@ -1,4 +1,4 @@
-﻿# plumelog-cli（中文）
+# plumelog-cli（中文）
 
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端（默认端口 **8891**）。
 
