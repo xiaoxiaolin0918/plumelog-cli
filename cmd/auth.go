@@ -157,7 +157,7 @@ func (a *App) newLogoutCmd() *cobra.Command {
 			}
 			env := output.Envelope{
 				OK:     false,
-				Error:  "server logout failed; local cookie jar clear attempted",
+				Error:  output.ErrorBody{Type: "cli", Message: "server logout failed; local cookie jar clear attempted"},
 				Result: output.MustResult(result),
 			}
 			if err := a.write(cmd, env); err != nil {
@@ -193,7 +193,7 @@ func (a *App) newStatusCmd() *cobra.Command {
 				probeOut["ok"] = false
 				probeOut["error"] = "request failed"
 				result["probe"] = probeOut
-				env := output.Envelope{OK: false, Error: "probe failed", Result: output.MustResult(result)}
+				env := output.Envelope{OK: false, Error: output.ErrorBody{Type: "cli", Message: "probe failed"}, Result: output.MustResult(result)}
 				if werr := a.write(cmd, env); werr != nil {
 					return werr
 				}
@@ -210,7 +210,7 @@ func (a *App) newStatusCmd() *cobra.Command {
 				probeOut["authenticated"] = false
 				probeOut["http_status"] = resp.Status
 				result["probe"] = probeOut
-				env := output.Envelope{OK: false, Error: "probe failed", Result: output.MustResult(result)}
+				env := output.Envelope{OK: false, Error: output.ErrorBody{Type: "cli", Message: "probe failed"}, Result: output.MustResult(result)}
 				if werr := a.write(cmd, env); werr != nil {
 					return werr
 				}

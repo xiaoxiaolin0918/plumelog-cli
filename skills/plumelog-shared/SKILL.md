@@ -34,7 +34,8 @@ plumelog doctor
 plumelog auth login --username "$PLUMELOG_LOGIN_USERNAME" --password "$PLUMELOG_LOGIN_PASSWORD"
 plumelog auth status
 plumelog auth status --probe    # 只读 POST /getRunModel 探会话
-# 无独立 whoami：用 auth status（可 --probe）等价
+plumelog whoami                 # 根级别名：base_url/authenticated/has_cookie/cookie_path/path_prefix
+plumelog whoami --probe
 plumelog auth logout
 ```
 
@@ -85,10 +86,10 @@ plumelog config set path_prefix root    # 或 /plumelog；auto 为默认
 { "ok": true, "result": { } }
 ```
 
-失败（常 stdout，exit ≠ 0）：
+失败（**stderr**，exit ≠ 0）：
 
 ```json
-{ "ok": false, "error": "human message", "risk": "high-risk-write" }
+{ "ok": false, "error": { "type": "cli", "message": "human message" }, "risk": "high-risk-write" }
 ```
 
 `--jq '<expr>'` 过滤整份信封（例：`--jq .result`）。`--format json|pretty|table`。
@@ -140,7 +141,10 @@ plumelog config show
 
 ## whoami
 
-**无**根级 `whoami`。等价：`plumelog auth status`（加 `--probe` 可验证会话）。P2 可补别名，见 gap 文档。
+根级 `plumelog whoami`（Risk: read）是 `auth status` 的稳定字段别名：
+
+- `base_url` / `authenticated` / `has_cookie` / `cookie_path` / `path_prefix`
+- 永不打印 Cookie 值或密码；`--probe` 用 `/getRunModel` 精炼 `authenticated`
 
 ## skills / 安装
 
@@ -163,7 +167,7 @@ plumelog skills install --dir "D:\custom\skills" --dry-run
 - **无** `plumelog update` / self-update（P2）；构建：`go build -o plumelog.exe .`
 ## Windows / MSYS
 
-若在 git-bash 里调 `plumelog api` 且 path 以 `/` 开头，MSYS 可能改写路径。规避：`MSYS_NO_PATHCONV=1`、`MSYS2_ARG_CONV_EXCL='*'`，或用 PowerShell/cmd。CLI 侧尚未做 yunxiao 式 unmangle（P2）。
+若在 git-bash 里调 `plumelog api` 且 path 以 `/` 开头，MSYS 可能改写路径。CLI **会自动 unmangle**（stderr `note:`）；仍可用 `MSYS_NO_PATHCONV=1`、`MSYS2_ARG_CONV_EXCL='*'`、双斜杠 `//clientQuery`，或 `PLUMELOG_API_NO_UNMANGLE=1` 关闭。
 
 ## Reference
 

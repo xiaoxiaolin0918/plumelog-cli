@@ -1,6 +1,6 @@
 package cmd
 
-// PrintedError means the ok-envelope was already written to stdout.
+// PrintedError means the ok-envelope was already written (failures go to stderr).
 type PrintedError struct {
 	Msg  string
 	Code int // 0 means exit 1; confirmation gate uses risk.ExitConfirmationRequired (10)

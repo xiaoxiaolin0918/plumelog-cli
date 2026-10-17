@@ -46,6 +46,7 @@ export PLUMELOG_ADMIN_PASSWORD='你的管理密码'
 ./plumelog doctor
 ./plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
 ./plumelog auth status
+./plumelog whoami
 ./plumelog query search --app demo --level ERROR -q timeout
 ./plumelog trace get --trace-id TRACE_ID
 ./plumelog api POST /getRunModel

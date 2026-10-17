@@ -75,6 +75,7 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 ./plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
 ./plumelog auth status
 ./plumelog auth status --probe
+./plumelog whoami
 ./plumelog auth logout
 ```
 

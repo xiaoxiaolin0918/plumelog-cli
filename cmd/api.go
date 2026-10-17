@@ -30,7 +30,10 @@ deleteQueue and deleteIndex also require --admin-password, which is sent as
 adminPassWord and redacted in --dry-run.
 
 Non-POST methods are not checked by the login interceptor, but the cookie jar
-is still attached.`,
+is still attached.
+
+On Windows git-bash/MSYS, leading-/ paths are auto-restored when mangled
+(PLUMELOG_API_NO_UNMANGLE=1 disables).`,
 		Example: `  plumelog api POST /getRunModel
   plumelog api POST /clientQuery --query size=20 --query from=0 --body-file query.json
   plumelog api POST /deleteQueue --dry-run`,
@@ -43,7 +46,12 @@ is still attached.`,
 			if err != nil {
 				return a.fail(cmd, "", err)
 			}
-			path, q, err := splitPathQuery(args[1])
+			rawPath := args[1]
+			if restored, note := unmangleAPIPathArg(rawPath); note != "" {
+				rawPath = restored
+				fmt.Fprintln(msysNoteOut, note)
+			}
+			path, q, err := splitPathQuery(rawPath)
 			if err != nil {
 				return a.fail(cmd, "", err)
 			}
