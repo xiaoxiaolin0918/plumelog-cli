@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.1
+version: 0.1.2
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -26,7 +26,8 @@ metadata:
 plumelog query search --app demo --level ERROR -q timeout
 plumelog query search --trace-id TRACE --from-time 1700000000000 --to-time 1700003600000
 plumelog query search --dsl-file query.json --from-time 1700000000000 --to-time 1700003600000
-plumelog query search --index plume_log_run_20240101 --range day --app demo
+plumelog query search --index plume_log_run_20240101 --app demo
+plumelog query search --index plume_log_run_20240101 --from-time 2024-01-01 --to-time 2024-01-02 --app demo
 plumelog query apps
 plumelog query apps --source es
 plumelog query dsl --file query.json
@@ -42,10 +43,7 @@ plumelog query dsl --file query.json
 | `--trace-id` | `match_phrase` `traceId`；排序改 `dtTime asc, seq asc` |
 | `--class` / `--class-name` | `match_phrase` `className` |
 | `--server` / `--server-name` | `match_phrase` `serverName` |
-| `-q` / `--content` | `query_string` on `content`ï¼å« `.` èªå¨ `*...*`ï¼`--content-wildcard` å¼ºå¶å
-è£¸çæ®µï¼ç»æåä¸å
-ï¼ï¼`--no-content-auto-wildcard` å
-³èªå¨ |
+| `-q` / `--content` | `query_string` on `content`；含 `.` 自动 `*...*`；`--content-wildcard` 强制包裸片段（结构化不包）；`--no-content-auto-wildcard` 关自动 |
 | `--extend field=value`（可重复） | `match_phrase` 扩展/MDC 字段 |
 | `--from-time` / `--to-time` | `range` on `dtTime` + clientStart/EndDate；未来 `to` 夹到 now |
 | `--size` / `--from` | 分页（默认 size 100 或 config `default_size`） |
@@ -56,35 +54,44 @@ plumelog query dsl --file query.json
 
 未写时间时用 `default_time_window`（默认 1h）选日索引。运行日志索引形如 `plume_log_run_YYYYMMDD`。
 
-## `-q` / `--content` åè¯é·é±ï¼Issue #1ï¼
+## `--index` 时间窗（Issue #4）
 
-`-q` èµ° ES `query_string`ï¼`default_field: content`ï¼ãstandard analyzer ä¼æ
-`java.lang.OutOfMemoryError` åæ**åä¸ª token**ï¼åªæ `OutOfMemoryError` ææªéé
-çç±»åçæ®µä¼**æ 0 å½ä¸­**ï¼
-ææ¥äºæ
-æ¶ææè¯¯å¤ãæ æ¥éãã
+`POST /query` 在**无显式时间**时，服务端容易按「今天」窗处理；历史索引再叠今天窗会**静默 0 条**。
 
-| åæ³ | è¡ä¸º |
+| 写法 | 行为 |
 |------|------|
-| `-q OutOfMemoryError` | å¯è½æ¼æ¥ï¼æ  `.`ãæ éé
-ï¼ |
-| `-q java.lang.OutOfMemoryError` | CLI **èªå¨**å
-æ `*java.lang.OutOfMemoryError*` |
-| `-q OutOfMemoryError --content-wildcard` | å¼ºå¶å
-æ `*OutOfMemoryError*`ï¼`AND` / `field:value` ç­ç»æå **ä¸**å
-ï¼ |
-| `-q '*OutOfMemoryError*'` | å·²æéé
-ï¼CLI ä¸æ¹å |
-| `-q java.lang.OutOfMemoryError --no-content-auto-wildcard` | å
-³é­ dotted èªå¨éé
- |
-| `-q 'timeout AND retry'` å³ä½¿å¸¦ `--content-wildcard` | ç»æå query_stringï¼**æ°¸ä¸**å
-éé
- |
+| `--index plume_log_run_20261016`（无时间 flag） | CLI **自动**按索引日期对齐全天窗（stderr `note:`）；body `dtTime` 覆盖该日 |
+| `--index … --from-time/--to-time` | 显式时间**优先**，不做自动对齐 |
+| `--index … --range day\|week\|month` | `--range` 是**相对现在**的服务端窗；与历史索引组合可能仍偏今天 → stderr `warning:`；历史索引请用显式时间 |
+| `--index` 名无 `YYYYMMDD` 且无时间 | stderr `warning:`，避免误判无日志 |
+
+优先级（body 时间窗）：`--from-time/--to-time` > 索引日自动对齐 > `default_time_window`。`--range` 只影响 URL，不替代显式/自动对齐的 body 窗说明。
+
+```bash
+# 历史索引裸用（推荐）——自动对齐到 2026-10-16 全天
+plumelog query search --index plume_log_run_20261016 --size 1 --jq '.result.hits.total'
+
+# 显式时间（最稳）
+plumelog query search --index plume_log_run_20261016 --from-time 2026-10-16 --to-time 2026-10-17 --size 1
+```
+
+## `-q` / `--content` 分词陷阱（Issue #1）
+
+`-q` 走 ES `query_string`（`default_field: content`）。standard analyzer 会把
+`java.lang.OutOfMemoryError` 切成**单个 token**；只搜 `OutOfMemoryError` 或未通配的类名片段会**恒 0 命中**，
+排障事故时极易误判「无报错」。
+
+| 写法 | 行为 |
+|------|------|
+| `-q OutOfMemoryError` | 可能漏报（无 `.`、无通配） |
+| `-q java.lang.OutOfMemoryError` | CLI **自动**包成 `*java.lang.OutOfMemoryError*` |
+| `-q OutOfMemoryError --content-wildcard` | 强制包成 `*OutOfMemoryError*`（`AND` / `field:value` 等结构化 **不**包） |
+| `-q '*OutOfMemoryError*'` | 已有通配，CLI 不改写 |
+| `-q java.lang.OutOfMemoryError --no-content-auto-wildcard` | 关闭 dotted 自动通配 |
+| `-q 'timeout AND retry'` 即使带 `--content-wildcard` | 结构化 query_string，**永不**包通配 |
 
 ```bash
 plumelog query search -q OutOfMemoryError --content-wildcard --size 1 --jq '.result.hits.total'
 plumelog query search -q 'java.lang.OutOfMemoryError' --size 1 --jq '.result.hits.total'
 plumelog query search -q 'java.lang.OutOfMemoryError' --no-content-auto-wildcard --size 1
 ```
-

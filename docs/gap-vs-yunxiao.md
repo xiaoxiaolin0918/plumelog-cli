@@ -45,7 +45,7 @@
 
 ## P1
 
-- [x] **`plumelog skills list|read|path|install`**：install → `~/.agents/skills`（copy/symlink，`--force`）；随仓 `skills/`；Windows 默认 `%USERPROFILE%\.agents\skills`
+- [x] **`plumelog skills list|read|path|install|update`**：install/update → `~/.agents/skills`；源可为磁盘 `skills/` 或二进制 embed；`list --check` 比对 frontmatter version
 - [x] **`docs/smoke-checklist.md`**：从 qa 裁短的发版手跑页（本轮已加）
 - [x] **GitHub 正式仓发布**：PRIVATE https://github.com/xiaoxiaolin0918/plumelog-cli（勿提交 cookies/exe/密钥）
 - [x] **api MSYS unmangle**：CLI 自动还原 git-bash 改写的路径（PLUMELOG_API_NO_UNMANGLE=1 可关）；skill 已同步

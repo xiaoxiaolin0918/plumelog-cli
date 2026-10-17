@@ -242,12 +242,15 @@ func (a *App) newSkillsInstallCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "install",
-		Long: `Install skills from the repo skills/plumelog-* directories into the user's
+		Long: `Install skills from the bundled skills/plumelog-* directories into the user's
 agent skills directory (default: ~/.agents/skills on Unix, %USERPROFILE%\.agents\skills on Windows)
 so agents can discover them.
 
-Same layout as yunxiao "skills install". Default mode is recursive copy; use --symlink
-to link instead. Existing target skill dirs are skipped unless --force.
+Source is on-disk skills/ next to the binary or source tree when present; otherwise
+the skills embedded in the binary are materialized to the user cache. Same layout
+as yunxiao "skills install". Default mode is recursive copy; use --symlink to
+link instead. Existing target skill dirs are skipped unless --force.
+Prefer "plumelog skills update" to refresh already-installed copies after a CLI upgrade.
 
 Risk: write`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -281,5 +284,55 @@ Risk: write`,
 	cmd.Flags().StringArrayVar(&names, "skill", nil, "install only named skill (repeatable)")
 	cmd.Flags().BoolVar(&symlink, "symlink", false, "symlink instead of copy")
 	cmd.Flags().BoolVar(&force, "force", false, "replace existing target skill dirs")
+	return cmd
+}
+
+func (a *App) newSkillsUpdateCmd() *cobra.Command {
+	var (
+		installDir string
+		names      []string
+	)
+	cmd := &cobra.Command{
+		Use: "update",
+		Long: `Refresh installed agent skills to match this CLI binary.
+
+Copies plumelog-* skills from the bundled source (on-disk skills/ next to the
+binary or source tree, else the copy embedded in the binary) into the agent
+skills directory, replacing existing dirs. Equivalent to install --force for
+the current binary's skill set so Agent copies do not drift after CLI upgrades.
+
+Risk: write`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			a.format = firstNonEmpty(a.format, "json")
+			targetDir := installDir
+			if targetDir == "" {
+				targetDir = defaultSkillsInstallDir()
+			}
+			absTarget, err := filepath.Abs(targetDir)
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			srcRoot, source := skillsSourceMeta()
+			result, err := installSkills(srcRoot, absTarget, names, false, true, a.dryRun, cmd.ErrOrStderr())
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			result["action"] = "update"
+			result["source"] = source
+			if a.dryRun {
+				env := output.Envelope{
+					OK:     true,
+					DryRun: true,
+					Risk:   risk.Write,
+					Result: output.MustResult(result),
+				}
+				return a.write(cmd, env)
+			}
+			return a.ok(cmd, result)
+		},
+	}
+	mark(cmd, risk.Write, "Update installed skills to match this CLI binary")
+	cmd.Flags().StringVar(&installDir, "dir", "", "install root (default: ~/.agents/skills)")
+	cmd.Flags().StringArrayVar(&names, "skill", nil, "update only named skill (repeatable)")
 	return cmd
 }

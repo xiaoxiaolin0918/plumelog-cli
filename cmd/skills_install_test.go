@@ -212,3 +212,50 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+func TestSkillsUpdateForceRefreshes(t *testing.T) {
+	srcRoot := t.TempDir()
+	dstRoot := t.TempDir()
+	skill := filepath.Join(srcRoot, "plumelog-shared")
+	if err := os.MkdirAll(skill, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: plumelog-shared\nversion: 0.1.0\n---\nold\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// seed outdated install
+	inst := filepath.Join(dstRoot, "plumelog-shared")
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inst, "SKILL.md"), []byte("---\nname: plumelog-shared\nversion: 0.0.1\n---\nstale\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// bump source
+	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: plumelog-shared\nversion: 0.2.0\n---\nfresh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var warn bytes.Buffer
+	result, err := installSkills(srcRoot, dstRoot, nil, false, true, false, &warn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["installed_count"].(int) != 1 {
+		t.Fatalf("%+v", result)
+	}
+	got, err := os.ReadFile(filepath.Join(inst, "SKILL.md"))
+	if err != nil || !strings.Contains(string(got), "0.2.0") || !strings.Contains(string(got), "fresh") {
+		t.Fatalf("not refreshed: %s err=%v", got, err)
+	}
+}
+
+func TestReadSkillVersion(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "SKILL.md")
+	if err := os.WriteFile(p, []byte("---\nname: x\nversion: 1.2.3\n---\nbody\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if v := readSkillVersion(p); v != "1.2.3" {
+		t.Fatalf("got %q", v)
+	}
+}

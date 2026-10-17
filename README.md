@@ -103,6 +103,9 @@ Default sort is `dtTime desc`. A `--trace-id` switches to `dtTime asc` plus `seq
 
 `--index` or `--range day|week|month` switches the call to `POST /query`.
 
+> **Issue #4**: With `--index` alone (no `--from-time/--to-time/--range`), the CLI auto-aligns the dtTime window to the index `YYYYMMDD` so historical indexes do not silently return 0 hits. `--range` is relative to now; prefer explicit times for historical indexes.
+
+
 ## API escape hatch
 
 ```bash
