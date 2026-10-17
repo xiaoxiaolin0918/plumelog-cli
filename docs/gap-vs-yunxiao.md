@@ -13,7 +13,7 @@
 |------|---------|----------|
 | auth login/status/logout | ✅ | ✅ |
 | doctor | ✅ | ✅ |
-| whoami | ✅ | ❌（用 `auth status` / `--probe`） |
+| whoami | ✅ | ✅ 根级别名（脱敏字段） |
 | config get/set/path/show | ✅ | ✅ |
 | `--dry-run` / `--jq` / `--yes` | ✅ | ✅ |
 | confirmation_required + exit 10 | ✅ | ✅ exit **10** + `error.subtype=confirmation_required` |
@@ -29,8 +29,8 @@
 | | yunxiao | plumelog（现状） |
 |--|---------|------------------|
 | 成功 | `{ok, data, meta}` | `{ok, result}` |
-| 失败 `error` | 对象（type/subtype/…），常 stderr | **string**，常 stdout |
-| 缺 `--yes` | exit **10**，`subtype=confirmation_required` | exit **1**，`error` 为拒绝文案 |
+| 失败 `error` | 对象（type/subtype/…），常 stderr | **对象**（type/subtype/…），**stderr** |
+| 缺 `--yes` | exit **10**，`subtype=confirmation_required` | exit **10** + `confirmation_required`（stderr） |
 
 判断成功：看 **`ok`**，不要看上游 `code`。
 
@@ -39,7 +39,7 @@
 ## P0（先做 / 已部分完成）
 
 - [x] **skills 底座**：`skills/plumelog-shared` + `references/output-and-risk.md`；域 skill：query / trace / app / alarm / admin / api；`skills/README.md`
-- [x] **skill 写清门禁现状**：exit 1 + 扁平 string；明确尚未对齐 yunxiao exit 10 + `confirmation_required`（见 shared）
+- [x] **skill 写清门禁现状**：失败在 **stderr**；`error` 对象化；缺 `--yes` → exit **10** + `confirmation_required`（见 shared / output-and-risk）
 - [x] **确认门禁对齐**：推荐改 CLI → exit **10** + `error: {type, subtype: confirmation_required, hint, action, risk}`，便于 Agent 稳定分支；或长期在 skill 声明「勿按 yunxiao 解析」（已改 CLI 为 exit 10 + confirmation_required）
 - [x] **生产 URL / 凭据映射约定入 shared**：`http://plumelog.iipcloud.cn`；zhiyi-ops `.env` 的 `PLUMELOG_URL|USER|PASSWORD` → `PLUMELOG_BASE_URL|LOGIN_USERNAME|LOGIN_PASSWORD`（不落明文）
 
@@ -48,16 +48,16 @@
 - [x] **`plumelog skills list|read|path|install`**：install → `~/.agents/skills`（copy/symlink，`--force`）；随仓 `skills/`；Windows 默认 `%USERPROFILE%\.agents\skills`
 - [x] **`docs/smoke-checklist.md`**：从 qa 裁短的发版手跑页（本轮已加）
 - [x] **GitHub 正式仓发布**：PRIVATE https://github.com/xiaoxiaolin0918/plumelog-cli（勿提交 cookies/exe/密钥）
-- [ ] **api skill 已写的 MSYS 注意**：若 Windows Agent 常用 `api`，可考虑 CLI 侧 unmangle（与 yunxiao 对齐）
+- [x] **api MSYS unmangle**：CLI 自动还原 git-bash 改写的路径（PLUMELOG_API_NO_UNMANGLE=1 可关）；skill 已同步
 
 ## P2
 
-- [ ] **根级 `whoami`**：别名封装 `auth status`（脱敏 base_url / has_cookie / cookie_path / path_prefix）；短期内 skill 继续用 auth status
+- [x] **根级 `whoami`**：别名封装 `auth status`（base_url / authenticated / has_cookie / cookie_path / path_prefix）
 - [ ] **轻量 multi-profile** 或文档声明「单实例用 env/config，不做 +onboard」
 - [ ] **`plumelog update` / self-update**：含旁路刷新 `skills/`（运维仓可暂用 `go build`）
 - [ ] **alias 子系统**（禁止嵌入 `--yes`）— 低优
 - [ ] **Agent 非 TTY 环境变量**（`PLUMELOG_NO_TUI` 等）— 默认已是 JSON，影响小
-- [ ] 质检 Minor 已记：门禁 JSON 无 subtype；无独立 whoami；原无 smoke（现已补短页）
+- [x] 质检 Minor 已记：门禁 JSON 有 subtype；已有 whoami；已有 smoke 短页
 
 ## 已对齐、无需再开债
 

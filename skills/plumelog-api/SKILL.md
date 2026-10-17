@@ -34,4 +34,10 @@ plumelog api POST /deleteQueue --dry-run
 
 ## Windows MSYS
 
-git-bash 可能把 `/clientQuery` 改成 Windows 路径。用 PowerShell，或设 `MSYS_NO_PATHCONV=1`。
+git-bash/MSYS 可能把 `/clientQuery` 改成 `C:/Program Files/Git/clientQuery`。CLI 会自动还原并在 stderr 打一行 `note:`。
+
+仍可：
+- `MSYS_NO_PATHCONV=1` / `MSYS2_ARG_CONV_EXCL='*'`
+- 双斜杠 `//clientQuery`
+- `PLUMELOG_API_NO_UNMANGLE=1` 关闭自动还原
+- 或改用 PowerShell/cmd

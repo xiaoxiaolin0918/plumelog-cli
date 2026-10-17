@@ -75,6 +75,7 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 ./plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
 ./plumelog auth status
 ./plumelog auth status --probe
+./plumelog whoami
 ./plumelog auth logout
 ```
 
@@ -132,7 +133,7 @@ Also high-risk ( `--yes` only ): `admin index reset`, `admin delete-by-query`, `
 
 `--dry-run` never sends, even when `--yes` is present. The preview includes method, URL, redacted headers, and body. Missing confirmations are listed in `would_require`.
 
-Output is a JSON envelope: `{"ok":true,"result":...}`. Errors use `{"ok":false,"error":"...","risk":"..."}`. `--format pretty` indents it. `--format table` prints an array of objects as TSV when it can. `--jq` filters the envelope (for example `--jq .result`).
+Success is a JSON envelope on **stdout**: `{"ok":true,"result":...}`. Failures write JSON to **stderr** with an **object** `error` (`{"ok":false,"error":{"type":"cli","message":"..."},...}`). Missing `--yes` on a high-risk-write exits **10** with `error.subtype=confirmation_required` (also on stderr). `--format pretty` indents it. `--format table` prints an array of objects as TSV when it can. `--jq` filters the envelope (for example `--jq .result`).
 
 ## Config and cookies
 

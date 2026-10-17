@@ -98,6 +98,12 @@ Risk:
                    --admin-password (sent as query adminPassWord, never printed)
   --dry-run        prints Method, URL, redacted headers, and body; does not send
 
+Output:
+  success          JSON on stdout: {ok:true, result:...}
+  failure          JSON on stderr: {ok:false, error:{type,message,...}}
+  confirmation     missing --yes -> exit 10 + error.subtype=confirmation_required (stderr)
+                   (not exit 100; error is an object, not a string)
+
 Discovery:
   plumelog --help
   plumelog query --help
@@ -105,6 +111,7 @@ Discovery:
   plumelog <command> --help`,
 		Example: `  plumelog doctor
   plumelog auth status --probe
+  plumelog whoami
   plumelog query search --app order --level ERROR --from-time 1700000000000 --to-time 1700003600000
   plumelog admin queue clear --dry-run`,
 		SilenceUsage:  true,
@@ -130,6 +137,7 @@ Discovery:
 
 	root.AddCommand(
 		a.newAuthCmd(),
+		a.newWhoamiCmd(),
 		a.newDoctorCmd(),
 		a.newConfigCmd(),
 		a.newQueryCmd(),
@@ -379,18 +387,27 @@ func (a *App) write(cmd *cobra.Command, env output.Envelope) error {
 	for i, u := range env.FallbackURLs {
 		env.FallbackURLs[i] = client.RedactURL(u)
 	}
-	return output.Write(cmd.OutOrStdout(), a.format, a.jq, env, a.secrets())
+	// Success -> stdout; failure -> stderr (yunxiao-aligned).
+	w := cmd.OutOrStdout()
+	if !env.OK {
+		w = cmd.ErrOrStderr()
+	}
+	return output.Write(w, a.format, a.jq, env, a.secrets())
 }
 
 func (a *App) fail(cmd *cobra.Command, level string, err error) error {
-	env := output.Envelope{OK: false, Error: err.Error()}
+	body := output.ErrorBody{Type: "cli", Message: err.Error()}
+	if level != "" {
+		body.Risk = level
+	}
+	env := output.Envelope{OK: false, Error: body}
 	if level != "" {
 		env.Risk = level
 	}
 	if werr := a.write(cmd, env); werr != nil {
 		return werr
 	}
-	return &PrintedError{Msg: err.Error()}
+	return &PrintedError{Msg: body.Message}
 }
 
 func (a *App) failConfirmation(cmd *cobra.Command, g risk.GateResult) error {
@@ -478,17 +495,23 @@ func (a *App) do(cmd *cobra.Command, req client.Request) (client.Response, error
 
 func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response) error {
 	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
-		env := output.Envelope{
-			OK:     false,
-			Error:  fmt.Sprintf("server returned code %d", code),
-			URL:    client.RedactURL(resp.FinalURL),
-			Result: output.RawResult(resp.Body),
-		}
+		hint := ""
 		switch code {
 		case 401:
-			env.Hint = "not logged in; run: plumelog auth login --username USER"
+			hint = "not logged in; run: plumelog auth login --username USER"
 		case 402:
-			env.Hint = "invalid username or password"
+			hint = "invalid username or password"
+		}
+		env := output.Envelope{
+			OK: false,
+			Error: output.ErrorBody{
+				Type:    "api",
+				Message: fmt.Sprintf("server returned code %d", code),
+				Hint:    hint,
+			},
+			URL:    client.RedactURL(resp.FinalURL),
+			Result: output.RawResult(resp.Body),
+			Hint:   hint,
 		}
 		if err := a.write(cmd, env); err != nil {
 			return err

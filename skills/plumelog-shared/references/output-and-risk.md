@@ -2,10 +2,10 @@
 
 ## Success vs failure
 
-- Success: stdout JSON with `ok: true`, payload under **`result`** (not `data`), exit 0.
-- Ordinary failure: usually stdout JSON with `ok: false` and **`error` as a string**; exit 1.
-- Confirmation gate: stdout JSON with `ok: false` and **`error` as an object**; exit **10**.
-- Agents must branch on `ok` / exit code / `error.subtype` — never on upstream PlumeLog `code == 0`.
+- Success: **stdout** JSON with `ok: true`, payload under **`result`** (not `data`), exit 0.
+- Ordinary failure: **stderr** JSON with `ok: false` and **`error` as an object** (`type` / `message` / optional `subtype`/`hint`/`risk`/`action`); exit 1.
+- Confirmation gate: **stderr** JSON with `ok: false` and **`error` as an object**; exit **10** (not 100).
+- Agents must branch on `ok` / exit code / `error.subtype` — never on upstream PlumeLog `code == 0`. Prefer reading stderr on non-zero exit.
 
 ## Dry-run
 

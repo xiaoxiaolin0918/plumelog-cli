@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -22,6 +22,7 @@ func TestCommandTreeRisk(t *testing.T) {
 		"auth login":            "write",
 		"auth logout":           "write",
 		"auth status":           "read",
+		"whoami":                "read",
 		"doctor":                "read",
 		"config get":            "read",
 		"config set":            "write",
@@ -48,10 +49,10 @@ func TestCommandTreeRisk(t *testing.T) {
 		"admin delete-by-query": "high-risk-write",
 		"api":                   "varies",
 		"version":               "read",
-		"skills list":            "read",
-		"skills read":            "read",
-		"skills path":            "read",
-		"skills install":         "write",
+		"skills list":           "read",
+		"skills read":           "read",
+		"skills path":           "read",
+		"skills install":        "write",
 	}
 	for path, want := range required {
 		cmd, _, err := root.Find(strings.Split(path, " "))
@@ -311,6 +312,81 @@ func TestConfigSetRefusesSecrets(t *testing.T) {
 	}
 }
 
+func TestWhoamiFields(t *testing.T) {
+	out, err := run(t, "whoami", "--base-url", "http://127.0.0.1:9", "--path-prefix", "auto")
+	if err != nil {
+		t.Fatal(err, out)
+	}
+	var env map[string]any
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatal(err, out)
+	}
+	if env["ok"] != true {
+		t.Fatalf("%s", out)
+	}
+	result := env["result"].(map[string]any)
+	for _, k := range []string{"base_url", "authenticated", "has_cookie", "cookie_path", "path_prefix"} {
+		if _, ok := result[k]; !ok {
+			t.Fatalf("missing %s in %s", k, out)
+		}
+	}
+	if result["path_prefix"] != "auto" {
+		t.Fatalf("path_prefix=%v", result["path_prefix"])
+	}
+	if result["has_cookie"] != false || result["authenticated"] != false {
+		t.Fatalf("expected no cookie: %s", out)
+	}
+	if strings.Contains(out, "JSESSIONID=") || strings.Contains(strings.ToLower(out), "password") {
+		t.Fatalf("leaked secret: %s", out)
+	}
+}
+
+func TestFailureEnvelopeGoesToStderr(t *testing.T) {
+	dir := t.TempDir()
+	stdout, stderr, err := runInStreams(t, dir, "config", "set", "login_password", "s3cret")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.TrimSpace(stdout) != "" {
+		t.Fatalf("stdout should be empty on failure, got %q", stdout)
+	}
+	if !strings.Contains(stderr, `"ok":false`) {
+		t.Fatalf("stderr envelope missing: %q", stderr)
+	}
+	if !strings.Contains(stderr, `"type":"cli"`) || !strings.Contains(stderr, "refusing") {
+		t.Fatalf("want objectified cli error: %s", stderr)
+	}
+	if strings.Contains(stderr, "s3cret") {
+		t.Fatalf("leaked password: %s", stderr)
+	}
+}
+
+func TestConfirmationStillExit10OnStderr(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+	dir := t.TempDir()
+	stdout, stderr, err := runInStreams(t, dir, "admin", "index", "reset",
+		"--base-url", "http://"+addr,
+		"--index", "plume_log_run_20240101")
+	if err == nil {
+		t.Fatal("expected refusal")
+	}
+	var pe *PrintedError
+	if !errors.As(err, &pe) || pe.ExitCode() != risk.ExitConfirmationRequired {
+		t.Fatalf("want exit 10, got %v", err)
+	}
+	if strings.TrimSpace(stdout) != "" {
+		t.Fatalf("stdout should be empty, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "confirmation_required") || !strings.Contains(stderr, `"type":"confirmation"`) {
+		t.Fatalf("%s", stderr)
+	}
+}
+
 func run(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	return runIn(t, t.TempDir(), args...)
@@ -318,10 +394,22 @@ func run(t *testing.T, args ...string) (string, error) {
 
 func runIn(t *testing.T, dir string, args ...string) (string, error) {
 	t.Helper()
+	stdout, stderr, err := runInStreams(t, dir, args...)
+	if err != nil && strings.TrimSpace(stderr) != "" {
+		return stderr, err
+	}
+	return stdout, err
+}
+
+// runInStreams returns stdout and stderr separately. On failure the JSON
+// envelope is on stderr (yunxiao-aligned); runIn returns that envelope so
+// existing assertions keep working.
+func runInStreams(t *testing.T, dir string, args ...string) (string, string, error) {
+	t.Helper()
 	root := NewRoot()
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
-	root.SetErr(io.Discard)
+	root.SetErr(&stderr)
 	full := append([]string{
 		"--config", filepath.Join(dir, "config.json"),
 		"--cookie-jar", filepath.Join(dir, "cookies.txt"),
@@ -329,5 +417,5 @@ func runIn(t *testing.T, dir string, args ...string) (string, error) {
 	}, args...)
 	root.SetArgs(full)
 	err := root.Execute()
-	return stdout.String(), err
+	return stdout.String(), stderr.String(), err
 }
