@@ -1,8 +1,9 @@
-# Architecture
+﻿# Architecture
 
-Canonical in-repo document (keep this wiki page as a short index):
+Canonical in-repo document (this page is a short index):
 
-→ https://github.com/xiaoxiaolin0918/plumelog-cli/blob/main/docs/architecture.md
+- https://github.com/xiaoxiaolin0918/plumelog-cli/blob/main/docs/architecture.md
+- Local path: [docs/architecture.md](../architecture.md)
 
 ## Snapshot (v0.1.1)
 
@@ -10,7 +11,7 @@ Canonical in-repo document (keep this wiki page as a short index):
 - **Envelope:** success on stdout `{ok,result}`; failures on stderr with object `error`
 - **Gates:** Risk labels; `--dry-run` / `--yes` / `--admin-password`; missing confirm → **exit 10** + `confirmation_required`
 - **Skills:** embed + `list|read|path|install|update` with semver `--check`
-- **Hosting:** PUBLIC GitHub only (no Origin)
+- **Hosting:** PUBLIC GitHub only (no Origin); docs live in-repo under [`docs/wiki/`](README.md) (not GitHub Wiki)
 - **Query:** `--index` without a time window auto-aligns `dtTime` to the index date (search + dsl)
 
-See also [[Auth]], [[Skills-for-AI]], [[Getting-Started]].
+See also [Auth](Auth.md), [Skills-for-AI](Skills-for-AI.md), [Getting-Started](Getting-Started.md).

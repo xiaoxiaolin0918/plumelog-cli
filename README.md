@@ -193,9 +193,20 @@ Passwords are refused by `config set`. Use flags or:
 
 Precedence: flags, then environment, then `config.json`, then defaults. Default base URL is `http://localhost:8891` with no trailing slash. Default timeout is 30s.
 
+## Documentation
+
+Human- and agent-oriented pages live **in this repository** under [docs/wiki/](docs/wiki/README.md) (start at [Home](docs/wiki/Home.md)). They are **not** the GitHub Wiki.
+
+- [Getting Started](docs/wiki/Getting-Started.md)
+- [Auth](docs/wiki/Auth.md) (session cookie, `auth login --web`)
+- [Skills for AI](docs/wiki/Skills-for-AI.md)
+- [Architecture (short)](docs/wiki/Architecture.md) → full contract: [docs/architecture.md](docs/architecture.md)
+
+Chinese overview: [docs/wiki/Home.zh-CN.md](docs/wiki/Home.zh-CN.md). Smoke checklist: [docs/smoke-checklist.md](docs/smoke-checklist.md).
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Smoke checklist: [docs/smoke-checklist.md](docs/smoke-checklist.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Not in v0
 

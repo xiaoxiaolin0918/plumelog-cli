@@ -184,9 +184,20 @@ URL = `base_url + path_prefix + path`。`--path-prefix` 默认 `auto`：先试 `
 
 优先级：命令行 > 环境变量 > `config.json` > 默认值。HTTP 超时默认 30 秒（`--timeout`）。
 
+## 文档
+
+面向人类与 AI 的说明写在**本仓库** [docs/wiki/](docs/wiki/README.md)（入口 [Home.zh-CN](docs/wiki/Home.zh-CN.md) / [Home](docs/wiki/Home.md)），**不是** GitHub Wiki。
+
+- [快速开始](docs/wiki/Getting-Started.md)
+- [鉴权 Auth](docs/wiki/Auth.md)（Session Cookie、`auth login --web`）
+- [Skills for AI](docs/wiki/Skills-for-AI.md)
+- [架构摘要](docs/wiki/Architecture.md) → 完整契约：[docs/architecture.md](docs/architecture.md)
+
+冒烟清单：[docs/smoke-checklist.md](docs/smoke-checklist.md)。
+
 ## 贡献
 
-见 [CONTRIBUTING.md](CONTRIBUTING.md)。冒烟清单：[docs/smoke-checklist.md](docs/smoke-checklist.md)。
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## v0 不做
 
