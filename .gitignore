@@ -14,5 +14,14 @@ cookies.txt
 .env.*
 !.env.example
 
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# local QA run notes (may embed env-specific paths)
+docs/qa-run-*.md
+
 # OS
 .DS_Store

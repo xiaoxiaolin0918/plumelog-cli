@@ -12,12 +12,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/client"
-	"plumelog-cli/internal/config"
-	"plumelog-cli/internal/dsl"
-	"plumelog-cli/internal/output"
-	"plumelog-cli/internal/risk"
-	"plumelog-cli/internal/version"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/dsl"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/version"
 )
 
 // App is one CLI invocation. Tests build a fresh one via NewRoot.

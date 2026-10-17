@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/config"
-	"plumelog-cli/internal/dsl"
-	"plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/dsl"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
 
 func (a *App) newConfigCmd() *cobra.Command {

@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
 
 func (a *App) newWhoamiCmd() *cobra.Command {

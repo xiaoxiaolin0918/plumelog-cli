@@ -1,40 +1,52 @@
 # plumelog
 
+[![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.0)
+
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
 
-二进制名是 **`plumelog`**。
+二进制名 **`plumelog`**。许可证：[MIT](LICENSE)。英文说明：[README.md](README.md)。
 
 PlumeLog 使用和网页一样的 Session Cookie（常见名 `JSESSIONID`），不是 Bearer Token。CLI 不会在输出、日志或示例里打印密码或 Cookie 值。
 
-## 同步到本机
-
-在运维机上把本仓库放在：
-
-`D:\work\ops\plumelog-cli`
-
-在该目录编译出 `plumelog`。
-
 ## 安装
 
-需要 Go 1.22 或更高版本。
+需要 Go **1.22** 或更高版本。
 
-**Windows（本机运维目录）：**
+**从源码（推荐贡献者）：**
+
+```bash
+git clone https://github.com/xiaoxiaolin0918/plumelog-cli.git
+cd plumelog-cli
+go test ./...
+go build -o plumelog .
+./plumelog --help
+./plumelog version
+```
+
+**Windows（PowerShell）：**
 
 ```powershell
-cd D:\work\ops\plumelog-cli
 go build -o plumelog.exe .
 go test ./...
 .\plumelog.exe --help
-.\plumelog.exe version
 ```
 
-**Unix / Git Bash：**
+**Go install：**
 
 ```bash
-go build -o plumelog .
-go test ./...
-./plumelog --help
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.0
 ```
+
+发布说明：[v0.1.0](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.0)。
+
+## 安全（先读）
+
+- **不要提交** Cookie、密码、`.env` 或生产环境凭据。
+- 优先用环境变量（`PLUMELOG_LOGIN_PASSWORD`、`PLUMELOG_ADMIN_PASSWORD`），避免在共享 shell/历史里留下明文。
+- 文档与 Issue 里用占位主机名（例如 `http://127.0.0.1:8891`）。
+- Cookie 落在系统配置目录、权限 `0600`，且已被 gitignore（`*_cookies.txt`、`.env`）。
+- 漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## 30 秒上手
 
@@ -62,17 +74,34 @@ plumelog
   doctor                                  # 连通性、会话、getRunModel、队列
   config get | set | path | show          # 配置；show 会脱敏
   query search | dsl | apps               # 快捷查询、原始 DSL、应用名
-  trace get                               # trace=true 按 traceId 查链路
+  trace get                               # trace=true 下按 traceId 查链路
   app list | extend list | add | del      # 应用名与扩展字段
   alarm list | save | delete | messages   # 告警规则与监控消息
   admin queue counts | clear              # 队列深度 / 清空
   admin index info | delete | reset       # 索引
   admin run-model | delete-by-query
   api <METHOD> <path>                     # 原始 HTTP
+  skills list | path | read | install | update
   version
+  whoami
 ```
 
-`--help` 会标出 Risk：`read`、`write`、`high-risk-write`。`api` 的风险由路径决定。
+`--help` 会标注 Risk：`read`、`write`、`high-risk-write`。`api` 的风险由路径决定。
+
+## 鉴权
+
+```bash
+./plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
+./plumelog auth login --web          # 本机 127.0.0.1 浏览器表单（别名 --browser）；已有会话加 --force
+./plumelog auth status
+./plumelog auth status --probe
+./plumelog whoami
+./plumelog auth logout
+```
+
+`POST /login`，body 为 `{"username","password"}`。`402` 表示凭据无效。服务端未配置 `login.username` 时，空的 `auth login` 仍会 POST 并记录 `auth: open`。
+
+`auth status` 只输出 `has_cookie`、`cookie_path`、`base_url`，**从不**打印 Cookie 值。
 
 ## 查询示例
 
@@ -87,7 +116,7 @@ plumelog
 ./plumelog trace get --trace-id TRACE_ID --size 100
 ```
 
-快捷条件与 Home.vue 一致：`appName` / `env` / `logLevel` / `traceId` / `className` / `serverName` 用 `match_phrase`，正文用 `query_string`，`--extend field=value` 可重复，时间打在 `dtTime` 上。`--exclude-app` 把应用放进 `must_not`。
+快捷条件与 Home.vue 一致：`appName` / `env` / `logLevel` / `traceId` / `className` / `serverName` 用 `match_phrase`，正文用 `query_string`，`--extend field=value` 可重复，时间打在 `dtTime` 上。`--exclude-app` 把应用放到 `must_not`。
 
 默认排序 `dtTime desc`。带了 `--trace-id` 则改为 `dtTime asc` + `seq asc`。高亮默认打开，`--no-highlight` 关闭。
 
@@ -95,8 +124,16 @@ plumelog
 
 `--index` 或 `--range day|week|month` 会改走 `POST /query`。运行日志索引形如 `plume_log_run_YYYYMMDD`，链路索引形如 `plume_log_trace_YYYYMMDD`。
 
-> **Issue #4**：仅 `--index`、无 `--from-time/--to-time/--range` 时，CLI 按索引名中的 `YYYYMMDD` 自动对齐全天时间窗（避免历史索引静默 0 条）。`--range` 相对「现在」；历史索引请用显式时间。
+仅 `--index`、无 `--from-time` / `--to-time` / `--range` 时，CLI 按索引名中的 `YYYYMMDD` 自动对齐全天时间窗（避免历史索引静默 0 条）；`query dsl --index` 同样会改写 body 里的 `dtTime`。`--range` 相对「现在」；历史索引请用显式时间。
 
+## Skills（Agent 配套）
+
+```bash
+./plumelog skills list
+./plumelog skills list --check
+./plumelog skills install
+./plumelog skills update
+```
 
 ## 逃生舱
 
@@ -116,15 +153,15 @@ URL = `base_url + path_prefix + path`。`--path-prefix` 默认 `auto`：先试 `
 - **write**：直接执行。`--dry-run` 只打印请求。
 - **high-risk-write**：真正执行必须带 `--yes`（或 `-y`）。
 
-清空队列和删除索引还要 `--admin-password`（或环境变量 `PLUMELOG_ADMIN_PASSWORD`）。CLI 把它放进查询参数 `adminPassWord`，输出里永远打码。
+清空队列和删除索引还需 `--admin-password`（或环境变量 `PLUMELOG_ADMIN_PASSWORD`）。CLI 把它放进查询参数 `adminPassWord`，输出里永远打码。
 
-同样需要 `--yes` 的命令：`admin index reset`、`admin delete-by-query`、`alarm delete`、`app extend del`。上游的 `resetIndex` 和 `deleteByQuery` 并不校验管理密码，所以 CLI 不会把密码发到这两个接口。
+同样需要 `--yes` 的命令：`admin index reset`、`admin delete-by-query`、`alarm delete`、`app extend del`。上游的 `resetIndex` 与 `deleteByQuery` 并不校验管理密码，所以 CLI 不会把密码发到这两个接口。
 
-`--dry-run` 即使同时写了 `--yes` 也不会发请求。预览里有 Method、URL、打码后的 Header 和 Body。缺的确认项在 `would_require`。
+`--dry-run` 即使同时写了 `--yes` 也不会发请求。预览里有 Method、URL、打码后的 Header 与 Body。缺的确认项在 `would_require`。
 
-成功时 **stdout** JSON 信封：`{"ok":true,"result":...}`。失败写 **stderr**，且 `error` 为**对象**（含 `type`/`message`，门禁时还有 `subtype=confirmation_required`）。缺 `--yes` → **exit 10**（不是 100）。`--jq .result` 可对整份信封过滤。`--format` 支持 `json`（默认）、`pretty`、`table`。
+成功时 **stdout** JSON 信封：`{"ok":true,"result":...}`。失败写 **stderr**，且 `error` 是**对象**（含 `type`/`message`，门禁时还有 `subtype=confirmation_required`）。缺 `--yes` 时 **exit 10**。`--jq .result` 可对整份信封过滤。`--format` 支持 `json`（默认）、`pretty`、`table`。
 
-## 配置和 Cookie
+## 配置与 Cookie
 
 | | Unix | Windows |
 |--|------|---------|
@@ -146,6 +183,10 @@ URL = `base_url + path_prefix + path`。`--path-prefix` 默认 `auto`：先试 `
 - `PLUMELOG_ADMIN_PASSWORD`
 
 优先级：命令行 > 环境变量 > `config.json` > 默认值。HTTP 超时默认 30 秒（`--timeout`）。
+
+## 贡献
+
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。冒烟清单：[docs/smoke-checklist.md](docs/smoke-checklist.md)。
 
 ## v0 不做
 

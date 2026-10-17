@@ -9,10 +9,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"plumelog-cli/internal/client"
-	"plumelog-cli/internal/config"
-	"plumelog-cli/internal/output"
-	"plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
 
 func (a *App) newAuthCmd() *cobra.Command {
@@ -27,12 +27,18 @@ func (a *App) newAuthCmd() *cobra.Command {
 
 func (a *App) newLoginCmd() *cobra.Command {
 	var username, password string
+	var web, browser, force bool
 	cmd := &cobra.Command{
 		Use:  "login",
-		Long: "POST /login (and /plumelog/login when --path-prefix auto falls back).\nBody is {\"username\",\"password\"}. A successful call stores Set-Cookie in the jar.\nPassword is read from --password, PLUMELOG_LOGIN_PASSWORD, or a terminal prompt.\nAn empty username still POSTs /login so an open server (no loginUsername) can mint a session.",
+		Long: "POST /login (and /plumelog/login when --path-prefix auto falls back).\nBody is {\"username\",\"password\"}. A successful call stores Set-Cookie in the jar.\nPassword is read from --password, PLUMELOG_LOGIN_PASSWORD, or a terminal prompt.\nAn empty username still POSTs /login so an open server (no loginUsername) can mint a session.\n\n--web (alias --browser) starts a one-shot listener on 127.0.0.1 (never 0.0.0.0),\nopens the system browser to a tokenized URL, and collects username/password via a\nminimal form. Timeout is 120s. Passwords are never printed or written to disk.\nIf the cookie jar already has a session, pass --force to replace it.",
 		Example: `  plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
-  plumelog auth login`,
+  plumelog auth login
+  plumelog auth login --web
+  plumelog auth login --browser --force`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if web || browser {
+				return a.runWebLogin(cmd, force, webLoginDeps{})
+			}
 			user := username
 			if user == "" {
 				user = os.Getenv("PLUMELOG_LOGIN_USERNAME")
@@ -104,6 +110,9 @@ func (a *App) newLoginCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&username, "username", "", "login username (env PLUMELOG_LOGIN_USERNAME)")
 	cmd.Flags().StringVar(&password, "password", "", "login password (env PLUMELOG_LOGIN_PASSWORD); never printed")
+	cmd.Flags().BoolVar(&web, "web", false, "open a local browser form on 127.0.0.1 to collect credentials")
+	cmd.Flags().BoolVar(&browser, "browser", false, "alias of --web")
+	cmd.Flags().BoolVar(&force, "force", false, "with --web/--browser, replace an existing cookie jar session")
 	mark(cmd, risk.Write, "Log in and persist the session cookie")
 	return cmd
 }

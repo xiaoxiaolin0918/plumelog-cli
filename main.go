@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"plumelog-cli/cmd"
+	"github.com/xiaoxiaolin0918/plumelog-cli/cmd"
 )
 
 func main() {

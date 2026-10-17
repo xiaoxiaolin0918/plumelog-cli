@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"plumelog-cli/internal/output"
-	"plumelog-cli/internal/version"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/version"
 )
 
 // errBase is returned when the server root is unusable.

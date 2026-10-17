@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/client"
-	"plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
 
 const monitorIndex = "plumelog_monitor_message_key"

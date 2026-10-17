@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/output"
-	"plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
 
 type skillInstallItem struct {
