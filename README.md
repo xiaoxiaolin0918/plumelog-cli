@@ -40,7 +40,7 @@ go test ./...
 go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.1
 ```
 
-Release notes: [v0.1.0](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1).
+Release notes: [v0.1.1](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1).
 
 ## Security (read this first)
 
