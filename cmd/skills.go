@@ -114,8 +114,10 @@ func (a *App) newSkillsCmd() *cobra.Command {
 		Long: `List bundled plumelog-* skills.
 
 With --check, also compare each skill's frontmatter version against the copy
-installed under the agent skills directory (default ~/.agents/skills) and
-report status: bundled, installed, outdated, missing, or unknown.
+installed under the agent skills directory (default ~/.agents/skills).
+Status uses semver direction of installed relative to bundled:
+equal, outdated, ahead, or invalid; plus missing / unknown when a side has
+no readable version.
 
 Risk: read`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -142,7 +144,7 @@ Risk: read`,
 					bundledVer := readSkillVersion(filepath.Join(root, name, "SKILL.md"))
 					instMD := filepath.Join(installDir, name, "SKILL.md")
 					instVer := readSkillVersion(instMD)
-					status := "bundled"
+					status := "missing"
 					switch {
 					case instVer == "" && bundledVer != "":
 						if _, err := os.Stat(instMD); err == nil {
@@ -152,14 +154,12 @@ Risk: read`,
 						}
 					case instVer == "" && bundledVer == "":
 						if _, err := os.Stat(instMD); err == nil {
-							status = "installed"
+							status = string(RelEqual)
 						} else {
 							status = "missing"
 						}
-					case instVer == bundledVer:
-						status = "installed"
 					default:
-						status = "outdated"
+						status = string(CompareSemver(instVer, bundledVer))
 					}
 					statuses = append(statuses, map[string]any{
 						"name":              name,
