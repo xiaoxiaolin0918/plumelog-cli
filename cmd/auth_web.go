@@ -228,42 +228,88 @@ func openSystemBrowser(u string) error {
 	return c.Start()
 }
 
+func webLoginSharedCSS() string {
+	return `
+:root{--bg:#f0f2f5;--card:#fff;--text:#1a1a1a;--muted:#667085;--border:#e4e7ec;--accent:#2563eb;--accent-hover:#1d4ed8;--ok:#059669;--fail:#dc2626;--shadow:0 8px 24px rgba(16,24,40,.08)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:linear-gradient(160deg,#eef2ff 0%,var(--bg) 45%,#f8fafc 100%);color:var(--text);line-height:1.5}
+.card{width:100%;max-width:26rem;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:1.75rem 1.75rem 1.5rem}
+.brand{font-size:.8rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin:0 0 .35rem}
+h1{font-size:1.35rem;font-weight:650;margin:0 0 .75rem}
+.note{color:var(--muted);font-size:.9rem;margin:0 0 1.25rem}
+label{display:block;font-size:.875rem;font-weight:550;margin:0 0 .35rem;color:#344054}
+.field{margin:0 0 1rem}
+input{width:100%;padding:.65rem .75rem;border:1px solid var(--border);border-radius:8px;font:inherit;background:#fff;color:var(--text)}
+input:focus{outline:2px solid rgba(37,99,235,.35);border-color:var(--accent)}
+button{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:.35rem;padding:.7rem 1rem;border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+button:hover{background:var(--accent-hover)}
+.meta{list-style:none;padding:0;margin:1rem 0 0;font-size:.9rem}
+.meta li{margin:.4rem 0;padding:.55rem .7rem;background:#f9fafb;border:1px solid var(--border);border-radius:8px;word-break:break-all}
+.meta code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85em}
+.status{display:inline-block;font-size:.75rem;font-weight:650;padding:.2rem .55rem;border-radius:999px;margin-bottom:.65rem}
+.status.ok{background:#ecfdf5;color:var(--ok)}
+.status.fail{background:#fef2f2;color:var(--fail)}
+.err{margin:0 0 1rem;padding:.75rem .85rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#7f1d1d;font-size:.9rem;word-break:break-word}
+.foot{margin:1.1rem 0 0;color:var(--muted);font-size:.85rem}
+`
+}
+
 func webLoginFormHTML() string {
-	return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>plumelog login</title>
-<style>body{font-family:system-ui,sans-serif;max-width:24rem;margin:3rem auto;padding:0 1rem}
-label{display:block;margin:.75rem 0 .25rem}input{width:100%;padding:.4rem;box-sizing:border-box}
-button{margin-top:1rem;padding:.5rem 1rem}p.note{color:#555;font-size:.9rem}</style></head><body>
-<h1>plumelog login</h1>
-<p class="note">Credentials stay on this machine (127.0.0.1). The password is never shown again.</p>
+	return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>plumelog 登录</title>
+<style>` + webLoginSharedCSS() + `</style></head><body>
+<main class="card">
+<p class="brand">plumelog CLI</p>
+<h1>本机登录</h1>
+<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。</p>
 <form method="POST" autocomplete="off">
-<label>Username</label><input name="username" autocomplete="username">
-<label>Password</label><input name="password" type="password" autocomplete="current-password">
-<button type="submit">Sign in</button>
-</form></body></html>`
+<div class="field"><label for="username">用户名</label><input id="username" name="username" autocomplete="username" autofocus></div>
+<div class="field"><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password"></div>
+<button type="submit">登录</button>
+</form>
+<p class="foot">此页面由 <code>plumelog auth login --web</code> 临时打开，完成后可关闭标签页。</p>
+</main></body></html>`
 }
 
 func webLoginOKHTML(baseURL, cookiePath string) string {
-	return fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>plumelog login ok</title>
-<style>body{font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem}
-code{word-break:break-all}</style></head><body>
-<h1>Signed in</h1>
-<p>You can close this tab.</p>
-<ul>
-<li>base_url: <code>%s</code></li>
-<li>cookie_path: <code>%s</code></li>
+	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title>
+<style>`+webLoginSharedCSS()+`</style></head><body>
+<main class="card">
+<span class="status ok">成功</span>
+<h1>登录成功</h1>
+<p class="note">会话 Cookie 已写入本机。你可以关闭此标签页，回到终端继续使用 CLI。</p>
+<ul class="meta">
+<li>已登录到 base_url：<code>%s</code></li>
+<li>cookie_path：<code>%s</code></li>
 </ul>
-</body></html>`, html.EscapeString(baseURL), html.EscapeString(cookiePath))
+</main></body></html>`, html.EscapeString(baseURL), html.EscapeString(cookiePath))
 }
 
 func webLoginFailHTML(err error) string {
-	msg := "login failed"
+	msg := "未知错误"
 	if err != nil {
-		// Scrub is applied by callers via track; still avoid echoing raw error if it somehow embeds secrets.
-		msg = html.EscapeString(err.Error())
+		msg = webLoginErrZh(err)
 	}
-	return fmt.Sprintf(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>plumelog login failed</title>
-<style>body{font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem}</style></head><body>
-<h1>Login failed</h1><p>%s</p>
-<p>You can close this tab and retry from the CLI.</p>
-</body></html>`, msg)
+	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录失败</title>
+<style>`+webLoginSharedCSS()+`</style></head><body>
+<main class="card">
+<span class="status fail">失败</span>
+<h1>登录失败</h1>
+<p class="err">%s</p>
+<p class="foot">请关闭此标签页，在终端用 <code>plumelog auth login --web</code> 重试（如需覆盖已有会话请加 <code>--force</code>）。</p>
+</main></body></html>`, msg)
+}
+
+// webLoginErrZh maps common login errors to readable Chinese; unknown errors are HTML-escaped as-is.
+func webLoginErrZh(err error) string {
+	s := err.Error()
+	switch {
+	case strings.Contains(s, "invalid login"):
+		return "用户名或密码错误"
+	case strings.HasPrefix(s, "HTTP "):
+		return "服务器 HTTP 错误：" + html.EscapeString(s)
+	case strings.Contains(s, "server returned code"):
+		return "服务器返回错误码：" + html.EscapeString(s)
+	default:
+		return html.EscapeString(s)
+	}
 }

@@ -113,7 +113,7 @@ func TestWebLoginBindLoopbackTokenAndPersist(t *testing.T) {
 			errCh <- errors.New("html leaked password")
 			return
 		}
-		if !strings.Contains(string(b), "Signed in") {
+		if !strings.Contains(string(b), "登录成功") {
 			errCh <- errors.New("missing success page")
 			return
 		}
@@ -217,6 +217,43 @@ func TestWebLoginListenIsLoopbackOnly(t *testing.T) {
 	}
 	if host != "127.0.0.1" {
 		t.Fatalf("got %s want 127.0.0.1 (never 0.0.0.0)", host)
+	}
+}
+
+func TestWebLoginFormHTMLChinese(t *testing.T) {
+	html := webLoginFormHTML()
+	for _, want := range []string{"lang=\"zh-CN\"", "本机登录", "用户名", "密码", "登录", "127.0.0.1"} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("form HTML missing %q", want)
+		}
+	}
+	if strings.Contains(html, "cdn.") || strings.Contains(html, "http://") || strings.Contains(html, "https://") {
+		t.Fatal("form HTML must not load external resources")
+	}
+	if strings.Contains(html, "Sign in") || strings.Contains(html, "Username") {
+		t.Fatal("form HTML still has English chrome")
+	}
+}
+
+func TestWebLoginOKHTMLShowsBaseURL(t *testing.T) {
+	html := webLoginOKHTML("http://example.test/pl", `C:\cookies.txt`)
+	for _, want := range []string{"登录成功", "http://example.test/pl", `C:\cookies.txt`, "base_url"} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("ok HTML missing %q", want)
+		}
+	}
+}
+
+func TestWebLoginFailHTMLChinese(t *testing.T) {
+	html := webLoginFailHTML(errors.New("invalid login (402)"))
+	if !strings.Contains(html, "登录失败") {
+		t.Fatalf("missing fail title: %s", html)
+	}
+	if !strings.Contains(html, "用户名或密码错误") {
+		t.Fatalf("want zh invalid-login: %s", html)
+	}
+	if strings.Contains(html, "<script") {
+		t.Fatal("unexpected script")
 	}
 }
 

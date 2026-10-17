@@ -30,7 +30,7 @@ func (a *App) newLoginCmd() *cobra.Command {
 	var web, browser, force bool
 	cmd := &cobra.Command{
 		Use:  "login",
-		Long: "POST /login (and /plumelog/login when --path-prefix auto falls back).\nBody is {\"username\",\"password\"}. A successful call stores Set-Cookie in the jar.\nPassword is read from --password, PLUMELOG_LOGIN_PASSWORD, or a terminal prompt.\nAn empty username still POSTs /login so an open server (no loginUsername) can mint a session.\n\n--web (alias --browser) starts a one-shot listener on 127.0.0.1 (never 0.0.0.0),\nopens the system browser to a tokenized URL, and collects username/password via a\nminimal form. Timeout is 120s. Passwords are never printed or written to disk.\nIf the cookie jar already has a session, pass --force to replace it.",
+		Long: "POST /login (and /plumelog/login when --path-prefix auto falls back).\nBody is {\"username\",\"password\"}. A successful call stores Set-Cookie in the jar.\nPassword is read from --password, PLUMELOG_LOGIN_PASSWORD, or a terminal prompt.\nAn empty username still POSTs /login so an open server (no loginUsername) can mint a session.\n\n--web (alias --browser) starts a one-shot listener on 127.0.0.1 (never 0.0.0.0),\nopens the system browser to a tokenized URL, and collects username/password via a\nminimal Chinese HTML form (inline CSS only). Timeout is 120s. Passwords are never printed or written to disk.\nIf the cookie jar already has a session, pass --force to replace it.",
 		Example: `  plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
   plumelog auth login
   plumelog auth login --web
