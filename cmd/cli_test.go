@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
 
 func TestCommandTreeRisk(t *testing.T) {

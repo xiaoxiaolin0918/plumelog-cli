@@ -7,5 +7,5 @@ const (
 	// Version is the v0 release.
 	Version = "0.1.0"
 	// UserAgent is sent on every HTTP request.
-	UserAgent = "plumelog-cli/" + Version
+	UserAgent = "github.com/xiaoxiaolin0918/plumelog-cli/" + Version
 )

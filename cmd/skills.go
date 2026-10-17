@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/risk"
-	skillfs "plumelog-cli/skills"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
+	skillfs "github.com/xiaoxiaolin0918/plumelog-cli/skills"
 )
 
 var skillVersionRE = regexp.MustCompile(`(?m)^version:\s*["']?([^\s"']+)["']?\s*$`)

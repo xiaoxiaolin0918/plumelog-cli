@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"plumelog-cli/internal/version"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/version"
 )
 
 //go:embed all:plumelog-admin all:plumelog-alarm all:plumelog-api all:plumelog-app all:plumelog-query all:plumelog-shared all:plumelog-trace

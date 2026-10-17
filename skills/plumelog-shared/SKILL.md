@@ -32,6 +32,7 @@ export PLUMELOG_LOGIN_PASSWORD="..."                     # 勿打印
 
 plumelog doctor
 plumelog auth login --username "$PLUMELOG_LOGIN_USERNAME" --password "$PLUMELOG_LOGIN_PASSWORD"
+plumelog auth login --web   # 本机 127.0.0.1 浏览器表单采集密码（别名 --browser；已有 jar 用 --force）
 plumelog auth status
 plumelog auth status --probe    # 只读 POST /getRunModel 探会话
 plumelog whoami                 # 根级别名，字段与 auth status 相同

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"plumelog-cli/internal/client"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
 )
 
 func clientHTTP(timeout time.Duration, jar *client.Jar) http.Client {

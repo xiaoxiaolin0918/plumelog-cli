@@ -1,4 +1,4 @@
-module plumelog-cli
+module github.com/xiaoxiaolin0918/plumelog-cli
 
 go 1.22
 

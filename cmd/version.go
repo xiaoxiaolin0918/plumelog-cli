@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"plumelog-cli/internal/risk"
-	"plumelog-cli/internal/version"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/version"
 )
 
 func (a *App) newVersionCmd() *cobra.Command {

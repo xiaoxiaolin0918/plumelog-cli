@@ -1,39 +1,54 @@
 # plumelog
 
+[![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.0)
+
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
-The binary name is **`plumelog`**.
+Binary name: **`plumelog`**. License: [MIT](LICENSE).
+
+Chinese README: [README.zh-CN.md](README.zh-CN.md).
 
 PlumeLog authenticates with a servlet session cookie (usually `JSESSIONID`), the same way the web UI does. This CLI does **not** use bearer tokens. Cookie values and passwords are never printed.
 
-## Local sync
-
-Keep a working copy on the operator machine at:
-
-`D:\work\ops\plumelog-cli`
-
-Build the `plumelog` binary from that tree.
-
 ## Install
 
-**Windows:**
+Requires Go **1.22+**.
+
+**From source (recommended for contributors):**
+
+```bash
+git clone https://github.com/xiaoxiaolin0918/plumelog-cli.git
+cd plumelog-cli
+go test ./...
+go build -o plumelog .
+./plumelog --help
+./plumelog version
+```
+
+**Windows (PowerShell):**
 
 ```powershell
-cd D:\work\ops\plumelog-cli
 go build -o plumelog.exe .
 go test ./...
 .\plumelog.exe --help
 ```
 
-**Unix:**
+**Go install (module path = repo):**
 
 ```bash
-go build -o plumelog .
-go test ./...
-./plumelog --help
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.0
 ```
 
-Requires Go 1.22+.
+Release notes: [v0.1.0](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.0).
+
+## Security (read this first)
+
+- **Never commit** cookies, passwords, `.env`, or production credentials.
+- Prefer env vars (`PLUMELOG_LOGIN_PASSWORD`, `PLUMELOG_ADMIN_PASSWORD`) over putting secrets on the command line in shared shells/history.
+- Use placeholder hostnames in docs and issues (for example `http://127.0.0.1:8891`).
+- Cookie jars live under the OS config directory with mode `0600` and are gitignored (`*_cookies.txt`, `.env`).
+- See [SECURITY.md](SECURITY.md) to report vulnerabilities privately.
 
 ## 30-second start
 
@@ -64,7 +79,9 @@ plumelog
   admin index info | index delete | index reset
   admin run-model | delete-by-query
   api <METHOD> <path>
+  skills list | path | read | install | update
   version
+  whoami
 ```
 
 Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write**. `api` is **varies** based on the path.
@@ -73,6 +90,7 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 
 ```bash
 ./plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
+./plumelog auth login --web          # browser form on 127.0.0.1 (alias: --browser); --force replaces jar
 ./plumelog auth status
 ./plumelog auth status --probe
 ./plumelog whoami
@@ -81,7 +99,7 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 
 `POST /login` with `{"username","password"}`. `402` means invalid credentials. When the server has no `login.username`, an empty `auth login` still posts and records `auth: open`.
 
-`auth status` prints only `has_cookie`, `cookie_path`, and `base_url`.
+`auth status` prints only `has_cookie`, `cookie_path`, and `base_url` — never the cookie value.
 
 ## Query
 
@@ -103,8 +121,18 @@ Default sort is `dtTime desc`. A `--trace-id` switches to `dtTime asc` plus `seq
 
 `--index` or `--range day|week|month` switches the call to `POST /query`.
 
-> **Issue #4**: With `--index` alone (no `--from-time/--to-time/--range`), the CLI auto-aligns the dtTime window to the index `YYYYMMDD` so historical indexes do not silently return 0 hits. `--range` is relative to now; prefer explicit times for historical indexes.
+With `--index` alone (no `--from-time` / `--to-time` / `--range`), the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` so historical indexes do not silently return 0 hits. The same auto-align applies to `query dsl --index`. `--range` is relative to now; prefer explicit times for historical indexes.
 
+## Skills (agent companions)
+
+Bundled agent skill markdown can be listed, read, installed, or force-refreshed to match the running binary:
+
+```bash
+./plumelog skills list
+./plumelog skills list --check
+./plumelog skills install
+./plumelog skills update
+```
 
 ## API escape hatch
 
@@ -132,7 +160,7 @@ Ingest routes (`/sendLog`, `/getlog`) are not first-class commands. Reach them t
 
 `admin queue clear` and `admin index delete` also need `--admin-password` (or `PLUMELOG_ADMIN_PASSWORD`). The CLI sends it as the query parameter `adminPassWord` and never prints the value.
 
-Also high-risk ( `--yes` only ): `admin index reset`, `admin delete-by-query`, `alarm delete`, `app extend del`. Upstream `resetIndex` and `deleteByQuery` do not check the admin password, so the CLI does not put it on the wire.
+Also high-risk (`--yes` only): `admin index reset`, `admin delete-by-query`, `alarm delete`, `app extend del`. Upstream `resetIndex` and `deleteByQuery` do not check the admin password, so the CLI does not put it on the wire.
 
 `--dry-run` never sends, even when `--yes` is present. The preview includes method, URL, redacted headers, and body. Missing confirmations are listed in `would_require`.
 
@@ -164,6 +192,10 @@ Passwords are refused by `config set`. Use flags or:
 - `PLUMELOG_ADMIN_PASSWORD`
 
 Precedence: flags, then environment, then `config.json`, then defaults. Default base URL is `http://localhost:8891` with no trailing slash. Default timeout is 30s.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Smoke checklist: [docs/smoke-checklist.md](docs/smoke-checklist.md).
 
 ## Not in v0
 
