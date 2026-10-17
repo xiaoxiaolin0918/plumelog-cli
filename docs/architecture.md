@@ -4,7 +4,7 @@
 >
 > Aligned with **release [v0.1.1](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1)** / public repo [xiaoxiaolin0918/plumelog-cli](https://github.com/xiaoxiaolin0918/plumelog-cli) (GitHub only; no Origin mirror).
 >
-> **Never** print real passwords, `adminPassWord`, or Session Cookie values in logs, stdout, docs, or wiki examples.
+> **Never** print real passwords, `adminPassWord`, or Session Cookie values in logs, stdout, docs, or `docs/wiki/` examples.
 
 ---
 
@@ -230,6 +230,6 @@ Default time window: config `default_time_window` (1h). Future `--to-time` clamp
 | [skills/README.md](../skills/README.md) / `skills/plumelog-shared` | Agent contracts |
 | [docs/smoke-checklist.md](smoke-checklist.md) | Release smoke (exit **10** + `confirmation_required`) |
 | [SECURITY.md](../SECURITY.md) / [CONTRIBUTING.md](../CONTRIBUTING.md) | Vulnerability reports / contrib |
-| Wiki | Home, Getting-Started, Auth, Skills-for-AI, Architecture |
+| [docs/wiki/](wiki/README.md) | In-repo pages: Home, Getting-Started, Auth, Skills-for-AI, Architecture (not GitHub Wiki) |
 
 Upstream references (PlumeLog server/UI): `MainController`, `LoginCheckInterceptor`, `Home.vue` (`getShouldFilter` / `clientQuery`), `http.js` (`withCredentials`).
