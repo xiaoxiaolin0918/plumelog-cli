@@ -53,6 +53,7 @@ func TestCommandTreeRisk(t *testing.T) {
 		"skills read":           "read",
 		"skills path":           "read",
 		"skills install":        "write",
+		"skills update":         "write",
 	}
 	for path, want := range required {
 		cmd, _, err := root.Find(strings.Split(path, " "))

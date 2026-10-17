@@ -4,16 +4,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"plumelog-cli/internal/risk"
+	skillfs "plumelog-cli/skills"
 )
 
-// skillsRoot finds the bundled skills/ directory (next to binary, source tree, or cwd).
-func skillsRoot() string {
+var skillVersionRE = regexp.MustCompile(`(?m)^version:\s*["']?([^\s"']+)["']?\s*$`)
+
+// findDiskSkills locates an on-disk skills/ tree (next to binary, source, or cwd).
+func findDiskSkills() string {
 	candidates := []string{}
 	if exe, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "skills"))
@@ -26,14 +30,54 @@ func skillsRoot() string {
 	}
 	for _, c := range candidates {
 		if st, err := os.Stat(c); err == nil && st.IsDir() {
-			abs, err := filepath.Abs(c)
-			if err == nil {
-				return abs
+			// Require at least one plumelog-* skill so an empty placeholder dir loses to embed.
+			if hasPlumelogSkill(c) {
+				abs, err := filepath.Abs(c)
+				if err == nil {
+					return abs
+				}
+				return c
 			}
-			return c
 		}
 	}
+	return ""
+}
+
+func hasPlumelogSkill(root string) bool {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.IsDir() && strings.HasPrefix(e.Name(), "plumelog-") {
+			md := filepath.Join(root, e.Name(), "SKILL.md")
+			if st, err := os.Stat(md); err == nil && !st.IsDir() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// skillsRoot finds the bundled skills/ directory (disk preferred, else embedded cache).
+func skillsRoot() string {
+	if disk := findDiskSkills(); disk != "" {
+		return disk
+	}
+	if dest, err := skillfs.Materialize(); err == nil {
+		return dest
+	}
 	return "skills"
+}
+
+func skillsSourceMeta() (root string, source string) {
+	if disk := findDiskSkills(); disk != "" {
+		return disk, "disk"
+	}
+	if dest, err := skillfs.Materialize(); err == nil {
+		return dest, "embedded"
+	}
+	return "skills", "missing"
 }
 
 func isSkillsCommand(cmd *cobra.Command) bool {
@@ -45,18 +89,38 @@ func isSkillsCommand(cmd *cobra.Command) bool {
 	return false
 }
 
+func readSkillVersion(skillMD string) string {
+	b, err := os.ReadFile(skillMD)
+	if err != nil {
+		return ""
+	}
+	m := skillVersionRE.FindSubmatch(b)
+	if m == nil {
+		return ""
+	}
+	return string(m[1])
+}
+
 func (a *App) newSkillsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skills",
-		Short: "List, read, or install bundled agent skill content",
+		Short: "List, read, install, or update bundled agent skill content",
 		RunE:  helpOnly,
 	}
 
+	var listCheck bool
 	list := &cobra.Command{
 		Use: "list",
+		Long: `List bundled plumelog-* skills.
+
+With --check, also compare each skill's frontmatter version against the copy
+installed under the agent skills directory (default ~/.agents/skills) and
+report status: bundled, installed, outdated, missing, or unknown.
+
+Risk: read`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a.format = firstNonEmpty(a.format, "json")
-			root := skillsRoot()
+			root, source := skillsSourceMeta()
 			entries, err := os.ReadDir(root)
 			if err != nil {
 				return a.fail(cmd, risk.Read, fmt.Errorf("skills dir %s: %w", root, err))
@@ -70,9 +134,47 @@ func (a *App) newSkillsCmd() *cobra.Command {
 					}
 				}
 			}
-			return a.ok(cmd, map[string]any{"skills": names, "skills_dir": root})
+			result := map[string]any{"skills": names, "skills_dir": root, "source": source}
+			if listCheck {
+				installDir := defaultSkillsInstallDir()
+				var statuses []map[string]any
+				for _, name := range names {
+					bundledVer := readSkillVersion(filepath.Join(root, name, "SKILL.md"))
+					instMD := filepath.Join(installDir, name, "SKILL.md")
+					instVer := readSkillVersion(instMD)
+					status := "bundled"
+					switch {
+					case instVer == "" && bundledVer != "":
+						if _, err := os.Stat(instMD); err == nil {
+							status = "unknown"
+						} else {
+							status = "missing"
+						}
+					case instVer == "" && bundledVer == "":
+						if _, err := os.Stat(instMD); err == nil {
+							status = "installed"
+						} else {
+							status = "missing"
+						}
+					case instVer == bundledVer:
+						status = "installed"
+					default:
+						status = "outdated"
+					}
+					statuses = append(statuses, map[string]any{
+						"name":              name,
+						"status":            status,
+						"bundled_version":   bundledVer,
+						"installed_version": instVer,
+					})
+				}
+				result["check"] = statuses
+				result["install_dir"] = installDir
+			}
+			return a.ok(cmd, result)
 		},
 	}
+	list.Flags().BoolVar(&listCheck, "check", false, "compare bundled vs installed skill versions")
 	mark(list, risk.Read, "List available agent skills")
 
 	read := &cobra.Command{
@@ -87,7 +189,7 @@ func (a *App) newSkillsCmd() *cobra.Command {
 			if err != nil {
 				return a.fail(cmd, risk.Read, fmt.Errorf("skill %q not found at %s: %w", name, p, err))
 			}
-			return a.ok(cmd, map[string]any{"name": name, "path": p, "content": string(b)})
+			return a.ok(cmd, map[string]any{"name": name, "path": p, "content": string(b), "version": readSkillVersion(p)})
 		},
 	}
 	mark(read, risk.Read, "Read a skill SKILL.md")
@@ -97,21 +199,21 @@ func (a *App) newSkillsCmd() *cobra.Command {
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a.format = firstNonEmpty(a.format, "json")
-			root := skillsRoot()
+			root, source := skillsSourceMeta()
 			if len(args) == 0 {
-				return a.ok(cmd, map[string]any{"path": root})
+				return a.ok(cmd, map[string]any{"path": root, "source": source})
 			}
 			name := args[0]
 			p := filepath.Join(root, name)
 			if st, err := os.Stat(p); err != nil || !st.IsDir() {
 				return a.fail(cmd, risk.Read, fmt.Errorf("skill %q not found under %s", name, root))
 			}
-			return a.ok(cmd, map[string]any{"name": name, "path": p, "skill_md": filepath.Join(p, "SKILL.md")})
+			return a.ok(cmd, map[string]any{"name": name, "path": p, "skill_md": filepath.Join(p, "SKILL.md"), "source": source})
 		},
 	}
 	mark(pathCmd, risk.Read, "Print skills directory or one skill path")
 
-	cmd.AddCommand(list, read, pathCmd, a.newSkillsInstallCmd())
+	cmd.AddCommand(list, read, pathCmd, a.newSkillsInstallCmd(), a.newSkillsUpdateCmd())
 	return cmd
 }
 

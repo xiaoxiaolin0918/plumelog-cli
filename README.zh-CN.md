@@ -95,6 +95,9 @@ plumelog
 
 `--index` 或 `--range day|week|month` 会改走 `POST /query`。运行日志索引形如 `plume_log_run_YYYYMMDD`，链路索引形如 `plume_log_trace_YYYYMMDD`。
 
+> **Issue #4**：仅 `--index`、无 `--from-time/--to-time/--range` 时，CLI 按索引名中的 `YYYYMMDD` 自动对齐全天时间窗（避免历史索引静默 0 条）。`--range` 相对「现在」；历史索引请用显式时间。
+
+
 ## 逃生舱
 
 ```bash

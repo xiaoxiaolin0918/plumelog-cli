@@ -1,6 +1,6 @@
 ---
 name: plumelog-shared
-version: 0.1.2
+version: 0.1.3
 description: "Use for plumelog CLI setup/auth: auth login/status/logout, whoami, config, doctor, JSON ok/result envelope (success stdout; failure stderr with object error), --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 10 + confirmation_required), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:
@@ -141,10 +141,11 @@ plumelog config show
 
 根级 `plumelog whoami`（Risk: read）是 **`auth status` 的薄别名**：同一套输出路径与字段（`base_url` / `authenticated` / `has_cookie` / `cookie_path` / `path_prefix`）。永不打印 Cookie 值或密码；`--probe` 用 `/getRunModel` 精炼 `authenticated`。
 
-## skills / 安装
+## skills / 安装与更新
 
 ```bash
 plumelog skills list
+plumelog skills list --check
 plumelog skills read plumelog-shared
 plumelog skills path
 plumelog skills path plumelog-query
@@ -152,12 +153,17 @@ plumelog skills install
 plumelog skills install --force
 plumelog skills install --symlink
 plumelog skills install --skill plumelog-shared --skill plumelog-query
-plumelog skills install --dir "D:\custom\skills" --dry-run
+plumelog skills install --dir "D:\\custom\\skills" --dry-run
+plumelog skills update
+plumelog skills update --skill plumelog-query
+plumelog skills update --dry-run
 ```
 
-- 源目录：二进制旁 `skills/`、源码树 `skills/`、或 cwd `skills/`（含 `plumelog-*` + `SKILL.md`）
+- 源：二进制旁 `skills/`、源码树 `skills/`、或 cwd `skills/`；若都没有，则使用**嵌入二进制**的技能树（物化到用户 cache）
 - 默认安装根：`~/.agents/skills`（Unix）/ `%USERPROFILE%\.agents\skills`（Windows）
-- **无** `plumelog update` / self-update（P2）；构建：`go build -o plumelog.exe .`
+- `skills update`：把已装副本强制刷新为**当前二进制配套**版本（等价于针对当前源的 `install --force`），避免与 CLI 漂移（Issue #5）
+- `skills list --check`：对比 bundled vs installed 的 SKILL.md frontmatter `version`（installed / outdated / missing / unknown）
+- 仍无整包 `plumelog update` / self-update（P2）；构建：`go build -o plumelog.exe .`
 
 ## Windows / MSYS
 

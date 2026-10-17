@@ -69,9 +69,15 @@ Default sort is dtTime desc. A traceId switches sort to dtTime asc, seq asc.
 Highlight is on unless --no-highlight.
 
 --index or --range switches the endpoint to POST /query.
+When --index is set and none of --from-time/--to-time/--range are given, the CLI
+auto-aligns the dtTime window to the index YYYYMMDD (full calendar day) so
+historical indexes do not silently return 0 hits against "today".
+--range (day|week|month) is a server-relative window anchored at now; combining
+it with a historical --index can still miss. Prefer --from-time/--to-time for
+historical indexes. Explicit --from-time/--to-time always win for the body window.
 --dsl / --dsl-file replaces the generated body and conflicts with shortcut flags.
-clientStartDate and clientEndDate still select daily indices; they default to the
-configured window (1h) when omitted. A future --to-time is clamped to now.`,
+On /clientQuery, clientStartDate/clientEndDate select daily indices; they default
+to the configured window (1h) when omitted. A future --to-time is clamped to now.`,
 		Example: `  plumelog query search --app demo --level ERROR -q timeout
   plumelog query search --trace-id abc --from-time 1700000000000 --to-time 1700003600000
   plumelog query search --dsl-file query.json --from-time 1700000000000 --to-time 1700003600000
@@ -179,7 +185,7 @@ func bindSearchFlags(cmd *cobra.Command, f *searchFlags) {
 	cmd.Flags().BoolVar(&f.noHighlight, "no-highlight", false, "omit the content highlight block")
 	cmd.Flags().StringVar(&f.dsl, "dsl", "", "raw JSON body; conflicts with shortcut filters")
 	cmd.Flags().StringVar(&f.dslFile, "dsl-file", "", "raw JSON body file; conflicts with shortcut filters")
-	cmd.Flags().StringVar(&f.index, "index", "", "POST /query against this index (for example plume_log_run_YYYYMMDD)")
+	cmd.Flags().StringVar(&f.index, "index", "", "POST /query against this index (plume_log_run_YYYYMMDD); without time flags, window aligns to that day")
 	cmd.Flags().StringVar(&f.rng, "range", "", "POST /query range: day, week, or month")
 	cmd.Flags().BoolVar(&f.trace, "trace", false, "POST /clientQuery?trace=true")
 }
@@ -215,6 +221,28 @@ func (a *App) planSearch(cmd *cobra.Command, f searchFlags, forceTrace bool, siz
 	}
 	if (f.trace || forceTrace) && (f.index != "" || f.rng != "") {
 		return client.Request{}, errors.New("--trace selects clientQuery indices; omit --index and --range")
+	}
+
+	loc := time.Local
+	explicitTime := strings.TrimSpace(f.fromTime) != "" || strings.TrimSpace(f.toTime) != "" || strings.TrimSpace(f.rng) != ""
+	if strings.TrimSpace(f.index) != "" && !explicitTime {
+		if fromAligned, toAligned, day, ok := dsl.IndexDayWindow(f.index, loc); ok {
+			f.fromTime = strconv.FormatInt(fromAligned, 10)
+			f.toTime = strconv.FormatInt(toAligned, 10)
+			if cmd != nil {
+				fmt.Fprint(cmd.ErrOrStderr(), dsl.FormatIndexDayNote(f.index, day))
+			}
+		} else if cmd != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: --index %q has no YYYYMMDD and no --from-time/--to-time/--range; server may use today's window and return 0 hits\n", f.index)
+		}
+	} else if strings.TrimSpace(f.index) != "" && strings.TrimSpace(f.rng) != "" && strings.TrimSpace(f.fromTime) == "" && strings.TrimSpace(f.toTime) == "" {
+		if day, ok := dsl.ParseIndexDate(f.index, loc); ok {
+			now := time.Now().In(loc)
+			today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+			if !day.Equal(today) && cmd != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "warning: --index %s is not today but --range %s is server-relative to now; prefer --from-time/--to-time for historical indexes\n", f.index, f.rng)
+			}
+		}
 	}
 
 	fromMS, toMS, err := dsl.ResolveWindow(f.fromTime, f.toTime, a.timeWindow, time.Now())
