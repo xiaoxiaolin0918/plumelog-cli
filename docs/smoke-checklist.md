@@ -12,7 +12,7 @@
 | 3 | `plumelog auth status`（可选 `--probe`） | `has_cookie` 元数据；无 Cookie 值 |
 | 4 | `plumelog query search --app demo --level ERROR -q smoke --dry-run` | `dry_run: true`，不发网 |
 | 5 | `plumelog admin queue clear --dry-run` | 预览且 `adminPassWord` 打码；不发网 |
-| 6 | `plumelog admin queue clear`（无 `--yes`） | `ok: false`，exit ≠ 0；**当前** exit 1 + string error |
+| 6 | `plumelog admin queue clear`（无 `--yes`） | `ok: false`，exit **10**，stderr 对象含 `confirmation_required` |
 | 7 | `plumelog api POST /getRunModel --dry-run` | 预览成功 |
 | 8 | （若已装 skills）打开 `skills/plumelog-shared/SKILL.md` | 文件存在；或日后 `plumelog skills list` |
 

@@ -20,6 +20,7 @@ Agent 技能包，模式对齐 `yunxiao-cli/skills`：先读 **plumelog-shared**
 # 列出 / 读取 / 路径 / 版本检查
 plumelog skills list
 plumelog skills list --check
+# status: equal / outdated / ahead / invalid (installed vs bundled)
 plumelog skills read plumelog-shared
 plumelog skills path
 plumelog skills path plumelog-admin

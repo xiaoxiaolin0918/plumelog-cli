@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.2
+version: 0.1.3
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -60,7 +60,7 @@ plumelog query dsl --file query.json
 
 | 写法 | 行为 |
 |------|------|
-| `--index plume_log_run_20261016`（无时间 flag） | CLI **自动**按索引日期对齐全天窗（stderr `note:`）；body `dtTime` 覆盖该日 |
+| `--index plume_log_run_20261016`（无时间 flag） | CLI（`search`/`dsl`）**自动**按索引日期对齐全天窗（stderr `note:`）；body `dtTime` 覆盖该日 |
 | `--index … --from-time/--to-time` | 显式时间**优先**，不做自动对齐 |
 | `--index … --range day\|week\|month` | `--range` 是**相对现在**的服务端窗；与历史索引组合可能仍偏今天 → stderr `warning:`；历史索引请用显式时间 |
 | `--index` 名无 `YYYYMMDD` 且无时间 | stderr `warning:`，避免误判无日志 |
@@ -74,6 +74,12 @@ plumelog query search --index plume_log_run_20261016 --size 1 --jq '.result.hits
 # 显式时间（最稳）
 plumelog query search --index plume_log_run_20261016 --from-time 2026-10-16 --to-time 2026-10-17 --size 1
 ```
+
+`query dsl --index`（无时间 flag）与 `search` **同一套对齐**：stderr `note:`，并往 raw DSL body **写入/替换** `dtTime` 全日窗（避免仅 note、body 不改的不对称）。
+
+```bash
+# raw DSL + 历史索引：body 也会带上索引日 dtTime
+echo '{"query":{"match_all":{}}}' | plumelog query dsl --index plume_log_run_20261016 --size 1
 
 ## `-q` / `--content` 分词陷阱（Issue #1）
 

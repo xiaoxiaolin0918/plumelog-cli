@@ -20,25 +20,25 @@ import (
 )
 
 type searchFlags struct {
-	app, appName       string
-	excludeApp         bool
-	env                string
-	level, logLevel    string
-	traceID            string
-	class, className   string
-	server, serverName string
-	content            string
-	contentWildcard         bool
-	noContentAutoWildcard  bool
-	extend             []string
-	fromTime, toTime   string
-	size               int
-	from, offset       int
-	sort               string
-	noHighlight        bool
-	dsl, dslFile       string
-	index, rng         string
-	trace              bool
+	app, appName          string
+	excludeApp            bool
+	env                   string
+	level, logLevel       string
+	traceID               string
+	class, className      string
+	server, serverName    string
+	content               string
+	contentWildcard       bool
+	noContentAutoWildcard bool
+	extend                []string
+	fromTime, toTime      string
+	size                  int
+	from, offset          int
+	sort                  string
+	noHighlight           bool
+	dsl, dslFile          string
+	index, rng            string
+	trace                 bool
 }
 
 func (a *App) newQueryCmd() *cobra.Command {
@@ -98,8 +98,12 @@ to the configured window (1h) when omitted. A future --to-time is clamped to now
 func (a *App) newDSLCmd() *cobra.Command {
 	var f searchFlags
 	cmd := &cobra.Command{
-		Use:  "dsl",
-		Long: "POST a raw Elasticsearch JSON body. Read it from --file or stdin.\nDefault endpoint is /clientQuery. --index or --range selects /query. --trace adds trace=true.",
+		Use: "dsl",
+		Long: `POST a raw Elasticsearch JSON body. Read it from --file or stdin.
+Default endpoint is /clientQuery. --index or --range selects /query. --trace adds trace=true.
+When --index is set and none of --from-time/--to-time/--range are given, the CLI
+auto-aligns the dtTime window to the index YYYYMMDD (full calendar day) and
+rewrites the raw body the same way query search does (stderr note:).`,
 		Example: `  plumelog query dsl --file query.json
   cat query.json | plumelog query dsl --from-time 1700000000000 --to-time 1700003600000`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -122,7 +126,7 @@ func (a *App) newDSLCmd() *cobra.Command {
 	cmd.Flags().StringVar(&f.toTime, "to-time", "", "clientEndDate; a future value is clamped to now")
 	cmd.Flags().IntVar(&f.size, "size", 0, "page size (default 100)")
 	cmd.Flags().IntVar(&f.from, "from", 0, "page offset")
-	cmd.Flags().StringVar(&f.index, "index", "", "switch to POST /query with this index")
+	cmd.Flags().StringVar(&f.index, "index", "", "switch to POST /query; without time flags, align dtTime to index day (rewrites body)")
 	cmd.Flags().StringVar(&f.rng, "range", "", "POST /query range: day, week, or month")
 	cmd.Flags().BoolVar(&f.trace, "trace", false, "search trace indices (clientQuery trace=true)")
 	mark(cmd, risk.Read, "POST a raw Elasticsearch DSL")
@@ -225,10 +229,12 @@ func (a *App) planSearch(cmd *cobra.Command, f searchFlags, forceTrace bool, siz
 
 	loc := time.Local
 	explicitTime := strings.TrimSpace(f.fromTime) != "" || strings.TrimSpace(f.toTime) != "" || strings.TrimSpace(f.rng) != ""
+	autoAligned := false
 	if strings.TrimSpace(f.index) != "" && !explicitTime {
 		if fromAligned, toAligned, day, ok := dsl.IndexDayWindow(f.index, loc); ok {
 			f.fromTime = strconv.FormatInt(fromAligned, 10)
 			f.toTime = strconv.FormatInt(toAligned, 10)
+			autoAligned = true
 			if cmd != nil {
 				fmt.Fprint(cmd.ErrOrStderr(), dsl.FormatIndexDayNote(f.index, day))
 			}
@@ -253,23 +259,29 @@ func (a *App) planSearch(cmd *cobra.Command, f searchFlags, forceTrace bool, siz
 	var body []byte
 	if hasRaw {
 		body = raw
+		if autoAligned {
+			body, err = dsl.EnsureDtTimeRange(raw, fromMS, toMS)
+			if err != nil {
+				return client.Request{}, err
+			}
+		}
 	} else {
 		body, err = dsl.Build(dsl.Search{
-			App:        f.app,
-			ExcludeApp: f.excludeApp,
-			Env:        f.env,
-			Level:      f.level,
-			TraceID:    f.traceID,
-			ClassName:  f.class,
-			ServerName: f.server,
-			Content:         f.content,
+			App:                   f.app,
+			ExcludeApp:            f.excludeApp,
+			Env:                   f.env,
+			Level:                 f.level,
+			TraceID:               f.traceID,
+			ClassName:             f.class,
+			ServerName:            f.server,
+			Content:               f.content,
 			ContentWildcard:       f.contentWildcard,
 			NoContentAutoWildcard: f.noContentAutoWildcard,
-			Extend:          f.extend,
-			FromMS:     fromMS,
-			ToMS:       toMS,
-			Sort:       f.sort,
-			Highlight:  !f.noHighlight,
+			Extend:                f.extend,
+			FromMS:                fromMS,
+			ToMS:                  toMS,
+			Sort:                  f.sort,
+			Highlight:             !f.noHighlight,
 		})
 		if err != nil {
 			return client.Request{}, err
