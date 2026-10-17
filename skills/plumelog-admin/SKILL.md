@@ -47,6 +47,6 @@ plumelog admin delete-by-query --yes --index plume_log_run_20240101 --dsl-file d
 
 ### 门禁失败（现状）
 
-缺确认时 **exit 10** + `confirmation_required` 对象（见 shared）。**不是** yunxiao 的 exit 100 / `confirmation_required`。识别后停下来问用户，禁止静默加 `--yes`。
+缺确认时 **exit 10** + `confirmation_required` 对象（见 shared）。**不是** 旧文档曾写的 exit 10 / `confirmation_required`。识别后停下来问用户，禁止静默加 `--yes`。
 
 生产（`http://plumelog.iipcloud.cn`）上：**不要**对真实 clear/delete 去掉 `--dry-run`，除非用户点名并知情。

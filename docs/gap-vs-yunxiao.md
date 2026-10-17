@@ -39,7 +39,7 @@
 ## P0（先做 / 已部分完成）
 
 - [x] **skills 底座**：`skills/plumelog-shared` + `references/output-and-risk.md`；域 skill：query / trace / app / alarm / admin / api；`skills/README.md`
-- [x] **skill 写清门禁现状**：exit 1 + 扁平 string；明确尚未对齐 yunxiao exit 10 + `confirmation_required`（见 shared）
+- [x] **skill 写清门禁现状**：失败在 **stderr**；`error` 对象化；缺 `--yes` → exit **10** + `confirmation_required`（见 shared / output-and-risk）
 - [x] **确认门禁对齐**：推荐改 CLI → exit **10** + `error: {type, subtype: confirmation_required, hint, action, risk}`，便于 Agent 稳定分支；或长期在 skill 声明「勿按 yunxiao 解析」（已改 CLI 为 exit 10 + confirmation_required）
 - [x] **生产 URL / 凭据映射约定入 shared**：`http://plumelog.iipcloud.cn`；zhiyi-ops `.env` 的 `PLUMELOG_URL|USER|PASSWORD` → `PLUMELOG_BASE_URL|LOGIN_USERNAME|LOGIN_PASSWORD`（不落明文）
 

@@ -119,7 +119,7 @@ URL = `base_url + path_prefix + path`。`--path-prefix` 默认 `auto`：先试 `
 
 `--dry-run` 即使同时写了 `--yes` 也不会发请求。预览里有 Method、URL、打码后的 Header 和 Body。缺的确认项在 `would_require`。
 
-成功输出是 JSON 信封：`{"ok":true,"result":...}`。失败是 `{"ok":false,"error":"...","risk":"..."}`。`--jq .result` 可以再过滤。`--format` 支持 `json`（默认）、`pretty`、`table`。
+成功时 **stdout** JSON 信封：`{"ok":true,"result":...}`。失败写 **stderr**，且 `error` 为**对象**（含 `type`/`message`，门禁时还有 `subtype=confirmation_required`）。缺 `--yes` → **exit 10**（不是 100）。`--jq .result` 可对整份信封过滤。`--format` 支持 `json`（默认）、`pretty`、`table`。
 
 ## 配置和 Cookie
 

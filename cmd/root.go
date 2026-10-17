@@ -98,6 +98,12 @@ Risk:
                    --admin-password (sent as query adminPassWord, never printed)
   --dry-run        prints Method, URL, redacted headers, and body; does not send
 
+Output:
+  success          JSON on stdout: {ok:true, result:...}
+  failure          JSON on stderr: {ok:false, error:{type,message,...}}
+  confirmation     missing --yes -> exit 10 + error.subtype=confirmation_required (stderr)
+                   (not exit 100; error is an object, not a string)
+
 Discovery:
   plumelog --help
   plumelog query --help
