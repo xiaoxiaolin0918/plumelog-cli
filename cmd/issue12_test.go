@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 )
 
 func TestSearchContentWildcardDryRun(t *testing.T) {
@@ -107,7 +109,7 @@ func TestAutoLoginFlagMissingCreds(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error", out)
 	}
-	if !strings.Contains(out, "PLUMELOG_LOGIN_USERNAME") || strings.Contains(out, "s3cret") {
+	if (!strings.Contains(out, "PLUMELOG_LOGIN_USERNAME") && !strings.Contains(out, "remembered")) || strings.Contains(out, "s3cret") {
 		t.Fatalf("%s", out)
 	}
 }
@@ -186,5 +188,53 @@ func TestSearchNoContentAutoWildcard(t *testing.T) {
 	}
 	if !strings.Contains(out, "java.lang.OutOfMemoryError") {
 		t.Fatalf("%s", out)
+	}
+}
+
+
+func TestAutoLoginFromEncryptedCredStore(t *testing.T) {
+	var hits atomic.Int32
+	var loginHits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			loginHits.Add(1)
+			b, _ := io.ReadAll(r.Body)
+			if !strings.Contains(string(b), "store-user") || !strings.Contains(string(b), "store-pass-secret") {
+				t.Errorf("login body %s", b)
+			}
+			http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "from-store", Path: "/", HttpOnly: true})
+			_, _ = io.WriteString(w, `{"logs":[]}`)
+		case "/getAppNames":
+			n := hits.Add(1)
+			if n == 1 {
+				_, _ = io.WriteString(w, `{"code":401,"logs":[]}`)
+				return
+			}
+			_, _ = io.WriteString(w, `["demo"]`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	if err := credstore.Save(dir, credstore.Cred{Username: "store-user", Password: "store-pass-secret", AutoLogin: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("PLUMELOG_LOGIN_USERNAME", "")
+	t.Setenv("PLUMELOG_LOGIN_PASSWORD", "")
+	t.Setenv("PLUMELOG_AUTO_LOGIN", "")
+
+	out, err := runIn(t, dir, "query", "apps", "--base-url", srv.URL)
+	if err != nil {
+		t.Fatal(err, out)
+	}
+	if strings.Contains(out, "store-pass-secret") {
+		t.Fatalf("password leaked: %s", out)
+	}
+	if hits.Load() != 2 || loginHits.Load() != 1 {
+		t.Fatalf("hits=%d login=%d out=%s", hits.Load(), loginHits.Load(), out)
 	}
 }

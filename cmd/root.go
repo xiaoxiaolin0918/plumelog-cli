@@ -14,6 +14,7 @@ import (
 
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/dsl"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
@@ -279,6 +280,11 @@ func (a *App) resolveInto(cmd *cobra.Command) error {
 	a.dryRun = a.flagDryRun
 	a.yes = a.flagYes
 	a.autoLogin = a.flagAutoLogin || envTruthy("PLUMELOG_AUTO_LOGIN")
+	if !a.autoLogin {
+		if _, prefer, ok := credstore.PeekUsernameAutoLogin(credstore.DirFromConfigPath(a.configPath)); ok && prefer {
+			a.autoLogin = true
+		}
+	}
 
 	admin := os.Getenv("PLUMELOG_ADMIN_PASSWORD")
 	if changed(cmd, "admin-password") {
@@ -554,15 +560,26 @@ func isLoginRequest(req client.Request) bool {
 	return p == "/login" || strings.HasSuffix(p, "/login")
 }
 
-// silentLogin POSTs /login once using env/config credentials. Password is never printed.
+// silentLogin POSTs /login once using credentials. Password is never printed.
+// Priority: PLUMELOG_LOGIN_* env > encrypted login.cred > config login_username (user only).
 func (a *App) silentLogin(cmd *cobra.Command) error {
 	user := strings.TrimSpace(os.Getenv("PLUMELOG_LOGIN_USERNAME"))
 	if user == "" {
 		user = strings.TrimSpace(a.cfg.LoginUsername)
 	}
 	pass := os.Getenv("PLUMELOG_LOGIN_PASSWORD")
+	if pass == "" || user == "" {
+		if c, ok, err := credstore.Load(credstore.DirFromConfigPath(a.configPath)); err == nil && ok {
+			if user == "" {
+				user = strings.TrimSpace(c.Username)
+			}
+			if pass == "" {
+				pass = c.Password
+			}
+		}
+	}
 	if user == "" || pass == "" {
-		return a.fail(cmd, risk.Write, errors.New("auto-login requires PLUMELOG_LOGIN_USERNAME and PLUMELOG_LOGIN_PASSWORD"))
+		return a.fail(cmd, risk.Write, errors.New("auto-login requires PLUMELOG_LOGIN_USERNAME/PASSWORD or a remembered encrypted credential (auth login --web)"))
 	}
 	a.track(pass)
 	body, err := json.Marshal(map[string]string{"username": user, "password": pass})

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 )
 
 func TestWebLoginDryRunNoSecrets(t *testing.T) {
@@ -221,8 +222,8 @@ func TestWebLoginListenIsLoopbackOnly(t *testing.T) {
 }
 
 func TestWebLoginFormHTMLChinese(t *testing.T) {
-	html := webLoginFormHTML("http://prefill.example:8891", "")
-	for _, want := range []string{"lang=\"zh-CN\"", "本机登录", "服务地址", "用户名", "密码", "登录", "127.0.0.1", "name=\"base_url\"", "http://prefill.example:8891"} {
+	html := webLoginFormHTML("http://prefill.example:8891", "", false, "")
+	for _, want := range []string{"lang=\"zh-CN\"", "本机登录", "服务地址", "用户名", "密码", "登录", "127.0.0.1", "name=\"base_url\"", "http://prefill.example:8891", "记住并自动登录", "name=\"remember\""} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("form HTML missing %q", want)
 		}
@@ -236,7 +237,7 @@ func TestWebLoginFormHTMLChinese(t *testing.T) {
 }
 
 func TestWebLoginFormHTMLShowsErr(t *testing.T) {
-	html := webLoginFormHTML("not-a-url", "服务地址格式无效，需类似 http://localhost:8891")
+	html := webLoginFormHTML("not-a-url", "", false, "服务地址格式无效，需类似 http://localhost:8891")
 	if !strings.Contains(html, "服务地址格式无效") {
 		t.Fatalf("missing err: %s", html)
 	}
@@ -334,7 +335,7 @@ func TestWebLoginPersistsBaseURLFromForm(t *testing.T) {
 }
 
 func TestWebLoginOKHTMLShowsBaseURL(t *testing.T) {
-	html := webLoginOKHTML("http://example.test/pl", `C:\cookies.txt`)
+	html := webLoginOKHTML("http://example.test/pl", `C:\cookies.txt`, false)
 	for _, want := range []string{"登录成功", "http://example.test/pl", `C:\cookies.txt`, "base_url"} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("ok HTML missing %q", want)
@@ -381,4 +382,151 @@ func newTestApp(t *testing.T, dir, baseURL string) *App {
 	}
 	a.cfg.BaseURL = a.baseURL
 	return a
+}
+
+
+func TestWebLoginRememberEncryptsPassword(t *testing.T) {
+	var gotBody atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/login" {
+			http.NotFound(w, r)
+			return
+		}
+		body, _ := io.ReadAll(r.Body)
+		gotBody.Store(string(body))
+		http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "remember-cookie", Path: "/", HttpOnly: true})
+		_, _ = io.WriteString(w, `{"logs":[]}`)
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	a := newTestApp(t, dir, srv.URL)
+	cmd := a.newLoginCmd()
+	cmd.SetContext(context.Background())
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	ready := make(chan string, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		u := <-ready
+		form := url.Values{
+			"username": {"memuser"},
+			"password": {"mem-pass-secret"},
+			"base_url": {srv.URL},
+			"remember": {"1"},
+		}
+		resp, err := http.PostForm(u, form)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		b, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode != 200 || !strings.Contains(string(b), "登录成功") {
+			errCh <- errors.New("login failed: " + string(b))
+			return
+		}
+		if !strings.Contains(string(b), "自动登录") {
+			errCh <- errors.New("ok page missing remember note")
+			return
+		}
+		errCh <- nil
+	}()
+
+	if err := a.runWebLogin(cmd, false, webLoginDeps{
+		Timeout: 15 * time.Second,
+		OpenBrowser: func(u string) error {
+			ready <- u
+			return nil
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-errCh; err != nil {
+		t.Fatal(err)
+	}
+
+	credPath := filepath.Join(dir, "login.cred")
+	raw, err := os.ReadFile(credPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "mem-pass-secret") {
+		t.Fatal("plaintext password in login.cred")
+	}
+	cfgBytes, _ := os.ReadFile(filepath.Join(dir, "config.json"))
+	if strings.Contains(string(cfgBytes), "mem-pass-secret") || strings.Contains(string(cfgBytes), "password") {
+		t.Fatalf("password must not be in config.json: %s", cfgBytes)
+	}
+
+	c, ok, err := credstore.Load(dir)
+	if err != nil || !ok {
+		t.Fatalf("load cred: ok=%v err=%v", ok, err)
+	}
+	if c.Username != "memuser" || c.Password != "mem-pass-secret" || !c.AutoLogin {
+		t.Fatalf("%+v", c)
+	}
+	body, _ := gotBody.Load().(string)
+	if !strings.Contains(body, "mem-pass-secret") {
+		t.Fatalf("upstream missing password: %s", body)
+	}
+}
+
+func TestWebLoginWithoutRememberClearsStore(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/login" {
+			http.NotFound(w, r)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "x", Path: "/"})
+		_, _ = io.WriteString(w, `{"logs":[]}`)
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	if err := credstore.Save(dir, credstore.Cred{Username: "old", Password: "old-secret", AutoLogin: true}); err != nil {
+		t.Fatal(err)
+	}
+	a := newTestApp(t, dir, srv.URL)
+	cmd := a.newLoginCmd()
+	cmd.SetContext(context.Background())
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	ready := make(chan string, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		u := <-ready
+		form := url.Values{"username": {"n"}, "password": {"p"}, "base_url": {srv.URL}}
+		resp, err := http.PostForm(u, form)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		_ = resp.Body.Close()
+		errCh <- nil
+	}()
+	if err := a.runWebLogin(cmd, false, webLoginDeps{
+		Timeout:     15 * time.Second,
+		OpenBrowser: func(u string) error { ready <- u; return nil },
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-errCh; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "login.cred")); !os.IsNotExist(err) {
+		t.Fatalf("expected cleared store: %v", err)
+	}
+}
+
+func TestWebLoginFormHTMLRememberChecked(t *testing.T) {
+	html := webLoginFormHTML("http://x", "preuser", true, "")
+	if !strings.Contains(html, `value="preuser"`) {
+		t.Fatalf("missing prefill: %s", html)
+	}
+	if !strings.Contains(html, "checked") {
+		t.Fatal("remember should be checked")
+	}
 }
