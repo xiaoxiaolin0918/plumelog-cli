@@ -5,7 +5,7 @@ const (
 	// Name is the binary name.
 	Name = "plumelog"
 	// Version is the v0 release.
-	Version = "0.1.0"
+	Version = "0.1.2"
 	// UserAgent is sent on every HTTP request.
 	UserAgent = "github.com/xiaoxiaolin0918/plumelog-cli/" + Version
 )

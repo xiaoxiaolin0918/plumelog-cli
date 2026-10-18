@@ -5,7 +5,7 @@ Canonical in-repo document (this page is a short index):
 - https://github.com/xiaoxiaolin0918/plumelog-cli/blob/main/docs/architecture.md
 - Local path: [docs/architecture.md](../architecture.md)
 
-## Snapshot (v0.1.1)
+## Snapshot (v0.1.2)
 
 - **Transport auth:** Session Cookie via `POST /login` (optional `auth login --web` on 127.0.0.1)
 - **Envelope:** success on stdout `{ok,result}`; failures on stderr with object `error`

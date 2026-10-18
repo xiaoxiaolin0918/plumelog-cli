@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
@@ -37,10 +37,17 @@ go test ./...
 **Go install (module path = repo):**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.1
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.2
 ```
 
-Release notes: [v0.1.1](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1).
+Release notes: [v0.1.2](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2).
+
+## What's new in 0.1.2
+
+- Chinese `auth login --web` UI with **服务地址** (base URL) and **记住并自动登录** (encrypted `login.cred`; Windows DPAPI / elsewhere AES-GCM)
+- Silent re-login credential pairs are atomic; a silent-login `402` clears `login.cred`
+- Docs/wiki polish (in-repo wiki links, BOM strip) since v0.1.1
+- Version string aligned to **0.1.2** (was still reporting 0.1.0 on main)
 
 ## Security (read this first)
 
@@ -98,6 +105,8 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 ```
 
 `POST /login` with `{"username","password"}`. `402` means invalid credentials. When the server has no `login.username`, an empty `auth login` still posts and records `auth: open`.
+
+`auth login --web` shows a Chinese form with **服务地址** (base URL, prefilled from `--base-url` / env / config) and optional **记住并自动登录**, which stores an encrypted password beside config as `login.cred` (never plaintext in `config.json`). Details: [Auth wiki](docs/wiki/Auth.md).
 
 `auth status` prints only `has_cookie`, `cookie_path`, and `base_url` — never the cookie value.
 

@@ -19,7 +19,7 @@ export PLUMELOG_LOGIN_PASSWORD='YOUR_PASSWORD'   # never commit real secrets
 Install via module:
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.1
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.2
 ```
 
 Full README: https://github.com/xiaoxiaolin0918/plumelog-cli/blob/main/README.md  
