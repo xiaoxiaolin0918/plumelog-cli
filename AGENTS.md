@@ -1,77 +1,68 @@
 # AGENTS.md — plumelog-cli
 
-本机落地约定：独立 Go + cobra CLI 子仓，二进制名 **`plumelog`**。父目录 `D:\work\ops` 是 Python 运维工作区；**本目录是独立 git 仓**，不要按 ops 的 Python/`tools/` 惯例往这里塞脚本。
+本机落地约定：独立 **Go + cobra** CLI 仓，二进制名 **`plumelog`**。父目录 `D:\work\ops` 是 Python 运维工作区；**本目录是独立 git 仓**（GitHub：`xiaoxiaolin0918/plumelog-cli`），不要按 ops 的 Python/`tools/` 惯例往这里塞脚本。
 
-## 角色分工
+## 角色与边界
 
 | 角色 | 职责 |
 |------|------|
-| 云端 coding agent | 非 trivial 脚手架与大段写码（当前：https://cursor.com/agents/bc-a3980ac1-1b45-5f18-9b8d-ab697ad21fa5 ，Origin `new_repo`，未 publish 前无稳定 clone URL） |
-| 架构小弟 | 契约 `docs/architecture.md`（命令组、全局 flag、路径映射、风险门） |
-| 本机实现 | 同步云端产物、构建验证、小修；维护本文件与 README/构建说明 |
+| 本机实现 | 日常改码、测试、开 PR、发版准备；维护本文件与 README |
+| 架构契约 | [`docs/architecture.md`](docs/architecture.md)；人类/Agent 短文在 [`docs/wiki/`](docs/wiki/README.md) |
+| 云端 agent | 仅作辅助；**本仓 Cloud Agent 常不可达**，以本机 `gh` / git 为准 |
 
-禁止：手改 `.placeholder` 等脚手架占位；在未定稿契约上臆造命令面；写入 token / AccessKey / 密码。
+禁止：写入真实 PlumeLog 密码、Cookie、`adminPassWord`、token；把 secrets 写进 README/Issue/PR；臆造不存在的 `release.yml` / npm 工作流（当前 CI 只有 `go test`）。
 
-## 目录约定（落地后目标形态）
-
-对齐参考仓 `D:\work\grokbot\yunxiao-cli`：
+## 目录形态
 
 ```
 plumelog-cli/
-  AGENTS.md          # 本文件
-  README.md / README.zh-CN.md
-  go.mod / go.sum
-  main.go
-  Makefile
-  cmd/               # cobra 命令
-  internal/          # 客户端、配置、风险门等
+  AGENTS.md / README.md / README.zh-CN.md / SECURITY.md / CONTRIBUTING.md
+  go.mod / go.sum / main.go / Makefile / LICENSE
+  cmd/                 # cobra 命令
+  internal/            # 客户端、配置、鉴权、风险门、version 等
   docs/
-    architecture.md  # 架构契约（定稿后落盘）
-  scripts/           # 构建/检查脚本（如有）
+    architecture.md    # 架构契约
+    wiki/              # 仓内 wiki（非 GitHub Wiki）
+    smoke-checklist.md
+  skills/              # 随二进制打包的 agent skill markdown
+  .github/workflows/   # ci.yml（go test）
 ```
 
 与旁侧 ops 的边界：
 
-- `D:\work\ops\tools/`、`D:\work\ops\AGENTS.md` → Python 运维工具，勿混入本仓
-- 本仓只承载 Go CLI；安装产物可进用户 PATH（参考 yunxiao 的 `%USERPROFILE%\.local\bin`），勿散落到 `%TEMP%`
+- `D:\work\ops\tools/`、`D:\work\ops\AGENTS.md` → Python 运维，勿混入本仓
+- 本仓只承载 Go CLI；安装产物可进用户 PATH，勿散落到 `%TEMP%`
 
-## 脚手架与同步（先别瞎克隆）
+## 本机构建
 
-当前状态：仅有 `.placeholder`（文案要求等云端脚手架），**无 git**。
+- Go：`D:\tools\go\bin` 加入 PATH；`GOPROXY=https://goproxy.cn,direct`
+- 校验：
 
-准备步骤（云端 publish / 给出可 clone URL 后再执行；URL 以父代理或云端产物为准）：
+```powershell
+$env:PATH = "D:\tools\go\bin;" + $env:PATH
+$env:GOPROXY = "https://goproxy.cn,direct"
+go test ./...
+go build -o plumelog.exe .
+.\plumelog.exe version
+```
 
-1. **确认远程**：拿到 Origin/GitHub 的 clone URL 或已 publish 的 repo 名；未知 URL 不克隆。
-2. **备份占位**：若目录非空，先把 `.placeholder` / 本 `AGENTS.md` 拷到临时目录（避免被 `git clone` 拒绝或覆盖丢约定）。
-3. **git 初始化方式（二选一，优先 A）**  
-   - **A)** 空目录或清掉非约定文件后：`git clone <url> D:\work\ops\plumelog-cli`（若目录名冲突，先 clone 到旁路目录再 `robocopy`/`Move-Item` 合并）。  
-   - **B)** 已有本文件时：`git init` → `git remote add origin <url>` → `git fetch` → `git checkout -B main origin/main`（以远程默认分支为准）。
-4. **合并约定**：若远程尚无 `AGENTS.md`，把本机这份拷回仓根并提交（或开 PR）；保留架构侧 `docs/architecture.md`。
-5. **构建验证**：本机需 Go（见下）；`make build` 或 `go build -o plumelog.exe .`，再 `.\plumelog.exe --help` / `--version`。
-6. **通知**：同步+构建结果回父代理；命令面缺口对照 `docs/architecture.md` 回父代理。
+- 当前发布线：**v0.1.2**（`internal/version/version.go` 的 `Version` 必须与 tag 对齐；发版准备 PR 只 bump + docs，**不**在准备分支上打 tag / 建 GitHub Release）
 
-## 构建前提（本机）
+## 架构与命令面（摘要）
 
-- 参考仓 Go：`yunxiao-cli` 的 `go.mod` 为 **go 1.24.x**；本仓以落地后的 `go.mod` 为准。
-- 截至开局检查：**iipcloud-xxl 上 `go` 不在 PATH**，常见路径亦未找到。脚手架同步后需先安装/配置 Go 再做构建验证。
-- 禁止把真实 PlumeLog `adminPassWord`、cookie、token 写进仓或本文件。
+命令组：`auth` / `query` / `trace` / `app` / `alarm` / `admin` / `api` / `skills` / `doctor` / `config` / `version` / `whoami`。
 
-## 架构契约（待定稿）
-
-架构侧将产出 `docs/architecture.md`，预期覆盖：
-
-- 命令组：`auth` / `query` / `trace` / `app` / `alarm` / `admin` / `api`
-- 全局 flag；双前缀路径映射；Home.vue DSL 快捷过滤
-- 高风险操作：须 `--yes` + `adminPassWord`
-
-**定稿前**：只做目录约定与同步准备，不手写命令实现。定稿后对照命令面是否可落地，缺口回父代理。
+- 鉴权：Servlet Session Cookie（常见 `JSESSIONID`），非 Bearer。`auth login --web` 仅监听 `127.0.0.1`；可选记住密码 → 加密 `login.cred`（从不进 `config.json` 明文）
+- 高风险写：须 `--yes`；部分还需 `--admin-password` / `PLUMELOG_ADMIN_PASSWORD`
+- 细节以 `docs/architecture.md` 与 `docs/wiki/` 为准
 
 ## 工作风格
 
-- 用户肖晓霖；中文简报；少问确认；破坏性操作先确认。
-- 非 trivial 写码 → 云端 agent；本机 → 同步、构建验证、小修。
+- 用户：肖晓霖；中文简报；少问确认；破坏性操作先确认
+- **TDD**：能测的先写/改测试再实现；改完跑 `go test ./...`
+- 非 trivial 大改可开 PR；发版：bump `Version` → README/SECURITY/wiki 链接 → 合 main 后再打 `vX.Y.Z` tag
 
-## ??????????
+## 安全提醒
 
-- Go 1.24.4 @ `D:\tools\go\bin\go.exe`??? PATH ????
-- ?? `GOPROXY=https://goproxy.cn,direct`
+- 不要提交 `*_cookies.txt`、`.env`、`login.cred`、`login.key`
+- 文档与示例只用占位主机（如 `http://127.0.0.1:8891`）与 `$PLUMELOG_LOGIN_PASSWORD` 一类环境变量名

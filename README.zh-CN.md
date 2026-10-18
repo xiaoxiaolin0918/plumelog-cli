@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)
 
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
 
@@ -35,10 +35,18 @@ go test ./...
 **Go install：**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.1
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.2
 ```
 
-发布说明：[v0.1.1](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1)。
+发布说明：[v0.1.2](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)。
+
+
+## 0.1.2 更新摘要
+
+- 中文 `auth login --web`：表单含 **服务地址**（base URL）与可选 **记住并自动登录**（加密写入 `login.cred`；Windows 用 DPAPI，其他平台 AES-GCM）
+- 静默重登凭据成对取值；静默登录遇 `402` 会清除 `login.cred`
+- 相对 v0.1.1 的文档/wiki 整理（仓内 wiki 链接、去掉 BOM）
+- 版本号对齐为 **0.1.2**（此前 main 上仍显示 0.1.0）
 
 ## 安全（先读）
 
@@ -100,6 +108,8 @@ plumelog
 ```
 
 `POST /login`，body 为 `{"username","password"}`。`402` 表示凭据无效。服务端未配置 `login.username` 时，空的 `auth login` 仍会 POST 并记录 `auth: open`。
+
+`auth login --web` 中文表单含 **服务地址**（可由 `--base-url` / 环境变量 / 配置预填）与可选 **记住并自动登录**（密码加密存为配置旁的 `login.cred`，不会明文写入 `config.json`）。详见 [鉴权 Auth](docs/wiki/Auth.md)。
 
 `auth status` 只输出 `has_cookie`、`cookie_path`、`base_url`，**从不**打印 Cookie 值。
 
