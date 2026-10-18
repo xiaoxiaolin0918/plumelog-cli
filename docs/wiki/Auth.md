@@ -22,6 +22,7 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 - ~120s timeout; listener closes on success or timeout
 - Passwords are not printed, logged, or written to disk
 - If a session already exists in the jar, pass `--force`
+- Form includes **服务地址** (base URL), prefilled from `--base-url` / `PLUMELOG_BASE_URL` / config / default; the submitted value is used for login and persisted via the normal config write path when it differs
 
 ### Status output
 
