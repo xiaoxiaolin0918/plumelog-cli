@@ -103,7 +103,7 @@ func (a *App) runWebLogin(cmd *cobra.Command, force bool, deps webLoginDeps) err
 		case http.MethodGet:
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
-			_, _ = io.WriteString(w, webLoginFormHTML())
+			_, _ = io.WriteString(w, webLoginFormHTML(a.baseURL, ""))
 		case http.MethodPost:
 			if err := r.ParseForm(); err != nil {
 				http.Error(w, "bad form", http.StatusBadRequest)
@@ -111,10 +111,19 @@ func (a *App) runWebLogin(cmd *cobra.Command, force bool, deps webLoginDeps) err
 			}
 			user := strings.TrimSpace(r.Form.Get("username"))
 			pass := r.Form.Get("password")
-			// Never log or write password.
-			loginErr := a.persistLoginFromWeb(cmd, user, pass)
+			rawBase := r.Form.Get("base_url")
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
+			base, baseErr := normalizeWebBaseURL(rawBase)
+			if baseErr != nil {
+				// Keep listener open so the user can correct the URL.
+				_, _ = io.WriteString(w, webLoginFormHTML(strings.TrimSpace(rawBase), baseErr.Error()))
+				return
+			}
+			// Form value wins over flag/env/config prefill.
+			a.applyWebBaseURL(base)
+			// Never log or write password.
+			loginErr := a.persistLoginFromWeb(cmd, user, pass)
 			if loginErr != nil {
 				_, _ = io.WriteString(w, webLoginFailHTML(loginErr))
 				finish(outcome{err: loginErr})
@@ -207,6 +216,26 @@ func (a *App) persistLoginFromWeb(cmd *cobra.Command, user, pass string) error {
 	return nil
 }
 
+// normalizeWebBaseURL mirrors resolveInto / config set rules for base_url.
+func normalizeWebBaseURL(raw string) (string, error) {
+	base := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if base == "" {
+		return "", errors.New("服务地址不能为空")
+	}
+	if !strings.Contains(base, "://") {
+		return "", errors.New("服务地址格式无效，需类似 http://localhost:8891")
+	}
+	return base, nil
+}
+
+// applyWebBaseURL updates the in-memory client target used by the subsequent login POST.
+func (a *App) applyWebBaseURL(base string) {
+	a.baseURL = base
+	if a.client != nil {
+		a.client.BaseURL = base
+	}
+}
+
 func randomToken(nBytes int) (string, error) {
 	b := make([]byte, nBytes)
 	if _, err := rand.Read(b); err != nil {
@@ -254,14 +283,20 @@ button:hover{background:var(--accent-hover)}
 `
 }
 
-func webLoginFormHTML() string {
+func webLoginFormHTML(baseURL, errMsg string) string {
+	errBlock := ""
+	if errMsg != "" {
+		errBlock = `<p class="err">` + html.EscapeString(errMsg) + `</p>`
+	}
 	return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>plumelog 登录</title>
 <style>` + webLoginSharedCSS() + `</style></head><body>
 <main class="card">
 <p class="brand">plumelog CLI</p>
 <h1>本机登录</h1>
-<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。</p>
+<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。服务地址用于连接 PlumeLog；提交值优先于 CLI 预填。</p>
+` + errBlock + `
 <form method="POST" autocomplete="off">
+<div class="field"><label for="base_url">服务地址</label><input id="base_url" name="base_url" type="url" value="` + html.EscapeString(baseURL) + `" placeholder="http://localhost:8891" autocomplete="url"></div>
 <div class="field"><label for="username">用户名</label><input id="username" name="username" autocomplete="username" autofocus></div>
 <div class="field"><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password"></div>
 <button type="submit">登录</button>
@@ -269,7 +304,6 @@ func webLoginFormHTML() string {
 <p class="foot">此页面由 <code>plumelog auth login --web</code> 临时打开，完成后可关闭标签页。</p>
 </main></body></html>`
 }
-
 func webLoginOKHTML(baseURL, cookiePath string) string {
 	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title>
 <style>`+webLoginSharedCSS()+`</style></head><body>

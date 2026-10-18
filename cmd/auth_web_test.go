@@ -97,7 +97,7 @@ func TestWebLoginBindLoopbackTokenAndPersist(t *testing.T) {
 			errCh <- errors.New("want 404 for bad token")
 			return
 		}
-		form := url.Values{"username": {"webuser"}, "password": {"web-pass-secret"}}
+		form := url.Values{"username": {"webuser"}, "password": {"web-pass-secret"}, "base_url": {srv.URL}}
 		resp, err = http.PostForm(u, form)
 		if err != nil {
 			errCh <- err
@@ -221,17 +221,115 @@ func TestWebLoginListenIsLoopbackOnly(t *testing.T) {
 }
 
 func TestWebLoginFormHTMLChinese(t *testing.T) {
-	html := webLoginFormHTML()
-	for _, want := range []string{"lang=\"zh-CN\"", "本机登录", "用户名", "密码", "登录", "127.0.0.1"} {
+	html := webLoginFormHTML("http://prefill.example:8891", "")
+	for _, want := range []string{"lang=\"zh-CN\"", "本机登录", "服务地址", "用户名", "密码", "登录", "127.0.0.1", "name=\"base_url\"", "http://prefill.example:8891"} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("form HTML missing %q", want)
 		}
 	}
-	if strings.Contains(html, "cdn.") || strings.Contains(html, "http://") || strings.Contains(html, "https://") {
+	if strings.Contains(html, "cdn.") || strings.Contains(html, "src=\"http") || strings.Contains(html, "href=\"http") {
 		t.Fatal("form HTML must not load external resources")
 	}
 	if strings.Contains(html, "Sign in") || strings.Contains(html, "Username") {
 		t.Fatal("form HTML still has English chrome")
+	}
+}
+
+func TestWebLoginFormHTMLShowsErr(t *testing.T) {
+	html := webLoginFormHTML("not-a-url", "服务地址格式无效，需类似 http://localhost:8891")
+	if !strings.Contains(html, "服务地址格式无效") {
+		t.Fatalf("missing err: %s", html)
+	}
+	if !strings.Contains(html, `value="not-a-url"`) {
+		t.Fatalf("should keep typed value: %s", html)
+	}
+}
+
+func TestNormalizeWebBaseURL(t *testing.T) {
+	ok, err := normalizeWebBaseURL(" http://Host.Example:8891/ ")
+	if err != nil || ok != "http://Host.Example:8891" {
+		t.Fatalf("got %q %v", ok, err)
+	}
+	if _, err := normalizeWebBaseURL("   "); err == nil || !strings.Contains(err.Error(), "不能为空") {
+		t.Fatalf("empty: %v", err)
+	}
+	if _, err := normalizeWebBaseURL("localhost:8891"); err == nil || !strings.Contains(err.Error(), "格式无效") {
+		t.Fatalf("no scheme: %v", err)
+	}
+}
+
+func TestWebLoginPersistsBaseURLFromForm(t *testing.T) {
+	var gotHost atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotHost.Store(r.Host)
+		if r.URL.Path != "/login" {
+			http.NotFound(w, r)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "from-form-base", Path: "/", HttpOnly: true})
+		_, _ = io.WriteString(w, `{"logs":[]}`)
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	// Prefill a different URL; form must win.
+	a := newTestApp(t, dir, "http://127.0.0.1:9")
+	a.cfg.BaseURL = "http://127.0.0.1:9"
+	cmd := a.newLoginCmd()
+	cmd.SetContext(context.Background())
+	var outBuf strings.Builder
+	cmd.SetOut(&outBuf)
+	cmd.SetErr(io.Discard)
+
+	ready := make(chan string, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		u := <-ready
+		form := url.Values{"username": {"u1"}, "password": {"p1"}, "base_url": {srv.URL}}
+		resp, err := http.PostForm(u, form)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		b, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode != 200 || !strings.Contains(string(b), "登录成功") {
+			errCh <- errors.New("login page failed: " + string(b))
+			return
+		}
+		errCh <- nil
+	}()
+
+	err := a.runWebLogin(cmd, false, webLoginDeps{
+		Timeout: 15 * time.Second,
+		OpenBrowser: func(u string) error {
+			ready <- u
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err, outBuf.String())
+	}
+	if err := <-errCh; err != nil {
+		t.Fatal(err)
+	}
+	host, _ := gotHost.Load().(string)
+	wantHost := strings.TrimPrefix(srv.URL, "http://")
+	if host != wantHost {
+		t.Fatalf("login hit %q want %q (form base_url should win)", host, wantHost)
+	}
+	if a.baseURL != strings.TrimRight(srv.URL, "/") {
+		t.Fatalf("in-memory baseURL %q", a.baseURL)
+	}
+	cfgBytes, err := os.ReadFile(filepath.Join(dir, "config.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(cfgBytes), strings.TrimRight(srv.URL, "/")) {
+		t.Fatalf("config not persisted: %s", cfgBytes)
+	}
+	if strings.Contains(outBuf.String(), "p1") {
+		t.Fatal("password leaked in CLI output")
 	}
 }
 
