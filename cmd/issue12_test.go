@@ -5,9 +5,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 )
 
 func TestSearchContentWildcardDryRun(t *testing.T) {
@@ -107,7 +111,7 @@ func TestAutoLoginFlagMissingCreds(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error", out)
 	}
-	if !strings.Contains(out, "PLUMELOG_LOGIN_USERNAME") || strings.Contains(out, "s3cret") {
+	if (!strings.Contains(out, "PLUMELOG_LOGIN_USERNAME") && !strings.Contains(out, "remembered")) || strings.Contains(out, "s3cret") {
 		t.Fatalf("%s", out)
 	}
 }
@@ -186,5 +190,176 @@ func TestSearchNoContentAutoWildcard(t *testing.T) {
 	}
 	if !strings.Contains(out, "java.lang.OutOfMemoryError") {
 		t.Fatalf("%s", out)
+	}
+}
+
+
+func TestAutoLoginFromEncryptedCredStore(t *testing.T) {
+	var hits atomic.Int32
+	var loginHits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			loginHits.Add(1)
+			b, _ := io.ReadAll(r.Body)
+			if !strings.Contains(string(b), "store-user") || !strings.Contains(string(b), "store-pass-secret") {
+				t.Errorf("login body %s", b)
+			}
+			http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "from-store", Path: "/", HttpOnly: true})
+			_, _ = io.WriteString(w, `{"logs":[]}`)
+		case "/getAppNames":
+			n := hits.Add(1)
+			if n == 1 {
+				_, _ = io.WriteString(w, `{"code":401,"logs":[]}`)
+				return
+			}
+			_, _ = io.WriteString(w, `["demo"]`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	if err := credstore.Save(dir, credstore.Cred{Username: "store-user", Password: "store-pass-secret", AutoLogin: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("PLUMELOG_LOGIN_USERNAME", "")
+	t.Setenv("PLUMELOG_LOGIN_PASSWORD", "")
+	t.Setenv("PLUMELOG_AUTO_LOGIN", "")
+
+	out, err := runIn(t, dir, "query", "apps", "--base-url", srv.URL)
+	if err != nil {
+		t.Fatal(err, out)
+	}
+	if strings.Contains(out, "store-pass-secret") {
+		t.Fatalf("password leaked: %s", out)
+	}
+	if hits.Load() != 2 || loginHits.Load() != 1 {
+		t.Fatalf("hits=%d login=%d out=%s", hits.Load(), loginHits.Load(), out)
+	}
+}
+
+
+func TestSilentLoginEnvPairBeatsPartialMixWithStore(t *testing.T) {
+	var loginBody atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			b, _ := io.ReadAll(r.Body)
+			loginBody.Store(string(b))
+			http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "env-pair", Path: "/"})
+			_, _ = io.WriteString(w, `{"logs":[]}`)
+		case "/getAppNames":
+			if !strings.Contains(r.Header.Get("Cookie"), "JSESSIONID=env-pair") {
+				_, _ = io.WriteString(w, `{"code":401,"logs":[]}`)
+				return
+			}
+			_, _ = io.WriteString(w, `["demo"]`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	// Store has different user/pass; env complete pair must win atomically.
+	if err := credstore.Save(dir, credstore.Cred{Username: "store-alice", Password: "store-secret", AutoLogin: true}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PLUMELOG_LOGIN_USERNAME", "env-bob")
+	t.Setenv("PLUMELOG_LOGIN_PASSWORD", "env-secret")
+	t.Setenv("PLUMELOG_AUTO_LOGIN", "1")
+
+	out, err := runIn(t, dir, "query", "apps", "--base-url", srv.URL)
+	if err != nil {
+		t.Fatal(err, out)
+	}
+	body, _ := loginBody.Load().(string)
+	if !strings.Contains(body, "env-bob") || !strings.Contains(body, "env-secret") {
+		t.Fatalf("want env pair, got %s", body)
+	}
+	if strings.Contains(body, "store-alice") || strings.Contains(body, "store-secret") {
+		t.Fatalf("must not mix store: %s", body)
+	}
+}
+
+func TestSilentLoginDoesNotMixEnvUserWithStorePassword(t *testing.T) {
+	var loginBody atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			b, _ := io.ReadAll(r.Body)
+			loginBody.Store(string(b))
+			http.SetCookie(w, &http.Cookie{Name: "JSESSIONID", Value: "store-pair", Path: "/"})
+			_, _ = io.WriteString(w, `{"logs":[]}`)
+		case "/getAppNames":
+			if !strings.Contains(r.Header.Get("Cookie"), "JSESSIONID=store-pair") {
+				_, _ = io.WriteString(w, `{"code":401,"logs":[]}`)
+				return
+			}
+			_, _ = io.WriteString(w, `["demo"]`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	if err := credstore.Save(dir, credstore.Cred{Username: "store-alice", Password: "store-secret", AutoLogin: true}); err != nil {
+		t.Fatal(err)
+	}
+	// Only username in env — must NOT pair with store password; use whole store instead.
+	t.Setenv("PLUMELOG_LOGIN_USERNAME", "env-only-user")
+	t.Setenv("PLUMELOG_LOGIN_PASSWORD", "")
+	t.Setenv("PLUMELOG_AUTO_LOGIN", "")
+
+	out, err := runIn(t, dir, "query", "apps", "--base-url", srv.URL)
+	if err != nil {
+		t.Fatal(err, out)
+	}
+	body, _ := loginBody.Load().(string)
+	if !strings.Contains(body, `"username":"store-alice"`) || !strings.Contains(body, "store-secret") {
+		t.Fatalf("want atomic store pair, got %s", body)
+	}
+	if strings.Contains(body, "env-only-user") {
+		t.Fatalf("must not mix env username with store password: %s", body)
+	}
+}
+
+func TestSilentLogin402ClearsCredStore(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			_, _ = io.WriteString(w, `{"code":402,"logs":[]}`)
+		case "/getAppNames":
+			_, _ = io.WriteString(w, `{"code":401,"logs":[]}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	if err := credstore.Save(dir, credstore.Cred{Username: "bad", Password: "bad-pass-secret", AutoLogin: true}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PLUMELOG_LOGIN_USERNAME", "")
+	t.Setenv("PLUMELOG_LOGIN_PASSWORD", "")
+	t.Setenv("PLUMELOG_AUTO_LOGIN", "")
+
+	out, err := runIn(t, dir, "query", "apps", "--base-url", srv.URL)
+	if err == nil {
+		t.Fatal("expected 402 failure", out)
+	}
+	if !strings.Contains(out, "402") || !strings.Contains(out, "cleared") {
+		t.Fatalf("want cleared hint: %s", out)
+	}
+	if strings.Contains(out, "bad-pass-secret") {
+		t.Fatalf("password leaked: %s", out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "login.cred")); !os.IsNotExist(err) {
+		t.Fatalf("login.cred should be cleared after 402: %v", err)
 	}
 }

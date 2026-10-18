@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
@@ -103,7 +104,8 @@ func (a *App) runWebLogin(cmd *cobra.Command, force bool, deps webLoginDeps) err
 		case http.MethodGet:
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
-			_, _ = io.WriteString(w, webLoginFormHTML(a.baseURL, ""))
+			preUser, remember := a.webLoginPrefill()
+			_, _ = io.WriteString(w, webLoginFormHTML(a.baseURL, preUser, remember, ""))
 		case http.MethodPost:
 			if err := r.ParseForm(); err != nil {
 				http.Error(w, "bad form", http.StatusBadRequest)
@@ -112,24 +114,28 @@ func (a *App) runWebLogin(cmd *cobra.Command, force bool, deps webLoginDeps) err
 			user := strings.TrimSpace(r.Form.Get("username"))
 			pass := r.Form.Get("password")
 			rawBase := r.Form.Get("base_url")
+			remember := r.Form.Get("remember") == "1" || strings.EqualFold(r.Form.Get("remember"), "on")
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
 			base, baseErr := normalizeWebBaseURL(rawBase)
 			if baseErr != nil {
 				// Keep listener open so the user can correct the URL.
-				_, _ = io.WriteString(w, webLoginFormHTML(strings.TrimSpace(rawBase), baseErr.Error()))
+				_, _ = io.WriteString(w, webLoginFormHTML(strings.TrimSpace(rawBase), user, remember, baseErr.Error()))
 				return
 			}
 			// Form value wins over flag/env/config prefill.
 			a.applyWebBaseURL(base)
-			// Never log or write password.
+			// Never log password; encrypted save only when remember is checked.
 			loginErr := a.persistLoginFromWeb(cmd, user, pass)
 			if loginErr != nil {
 				_, _ = io.WriteString(w, webLoginFailHTML(loginErr))
 				finish(outcome{err: loginErr})
 				return
 			}
-			_, _ = io.WriteString(w, webLoginOKHTML(a.baseURL, a.cookiePath))
+			remErr := a.applyWebRemember(user, pass, remember)
+			// Login already succeeded (cookie written). Remember failure must not undo session;
+			// surface it on the success page instead of a hard fail.
+			_, _ = io.WriteString(w, webLoginOKHTML(a.baseURL, a.cookiePath, remember && remErr == nil, remErr))
 			finish(outcome{user: user, pass: pass})
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -216,6 +222,36 @@ func (a *App) persistLoginFromWeb(cmd *cobra.Command, user, pass string) error {
 	return nil
 }
 
+
+// webLoginPrefill returns username and whether "remember" should be checked.
+func (a *App) webLoginPrefill() (username string, remember bool) {
+	username = strings.TrimSpace(a.cfg.LoginUsername)
+	dir := credstore.DirFromConfigPath(a.configPath)
+	if u, auto, ok := credstore.PeekUsernameAutoLogin(dir); ok {
+		if username == "" {
+			username = u
+		}
+		remember = auto
+	}
+	return username, remember
+}
+
+// applyWebRemember saves or clears the encrypted credential store after a successful login.
+func (a *App) applyWebRemember(user, pass string, remember bool) error {
+	dir := credstore.DirFromConfigPath(a.configPath)
+	if !remember {
+		return credstore.Clear(dir)
+	}
+	if strings.TrimSpace(user) == "" || pass == "" {
+		return errors.New("勾选自动登录时需要用户名和密码")
+	}
+	return credstore.Save(dir, credstore.Cred{
+		Username:  strings.TrimSpace(user),
+		Password:  pass,
+		AutoLogin: true,
+	})
+}
+
 // normalizeWebBaseURL mirrors resolveInto / config set rules for base_url.
 func normalizeWebBaseURL(raw string) (string, error) {
 	base := strings.TrimRight(strings.TrimSpace(raw), "/")
@@ -280,31 +316,45 @@ button:hover{background:var(--accent-hover)}
 .status.fail{background:#fef2f2;color:var(--fail)}
 .err{margin:0 0 1rem;padding:.75rem .85rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#7f1d1d;font-size:.9rem;word-break:break-word}
 .foot{margin:1.1rem 0 0;color:var(--muted);font-size:.85rem}
+.check label{display:flex;align-items:center;gap:.5rem;font-weight:500;cursor:pointer;margin:0}
+.check input{width:auto;margin:0}
 `
 }
 
-func webLoginFormHTML(baseURL, errMsg string) string {
+func webLoginFormHTML(baseURL, username string, remember bool, errMsg string) string {
 	errBlock := ""
 	if errMsg != "" {
 		errBlock = `<p class="err">` + html.EscapeString(errMsg) + `</p>`
+	}
+	rememberAttr := ""
+	if remember {
+		rememberAttr = " checked"
 	}
 	return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>plumelog 登录</title>
 <style>` + webLoginSharedCSS() + `</style></head><body>
 <main class="card">
 <p class="brand">plumelog CLI</p>
 <h1>本机登录</h1>
-<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。服务地址用于连接 PlumeLog；提交值优先于 CLI 预填。</p>
+<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。勾选「记住并自动登录」后，密码以本机加密方式保存（Windows 使用 DPAPI），供之后的 <code>--auto-login</code> 使用；明文不会写入 config.json。</p>
 ` + errBlock + `
 <form method="POST" autocomplete="off">
 <div class="field"><label for="base_url">服务地址</label><input id="base_url" name="base_url" type="url" value="` + html.EscapeString(baseURL) + `" placeholder="http://localhost:8891" autocomplete="url"></div>
-<div class="field"><label for="username">用户名</label><input id="username" name="username" autocomplete="username" autofocus></div>
+<div class="field"><label for="username">用户名</label><input id="username" name="username" value="` + html.EscapeString(username) + `" autocomplete="username" autofocus></div>
 <div class="field"><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password"></div>
+<div class="field check"><label><input type="checkbox" name="remember" value="1"` + rememberAttr + `> 记住并自动登录</label></div>
 <button type="submit">登录</button>
 </form>
 <p class="foot">此页面由 <code>plumelog auth login --web</code> 临时打开，完成后可关闭标签页。</p>
 </main></body></html>`
 }
-func webLoginOKHTML(baseURL, cookiePath string) string {
+
+func webLoginOKHTML(baseURL, cookiePath string, remembered bool, rememberErr error) string {
+	extra := ""
+	if rememberErr != nil {
+		extra = `<li class="err">记住并自动登录未保存（会话已登录）：` + html.EscapeString(rememberErr.Error()) + `</li>`
+	} else if remembered {
+		extra = `<li>已启用记住并自动登录（密码已本机加密保存）</li>`
+	}
 	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title>
 <style>`+webLoginSharedCSS()+`</style></head><body>
 <main class="card">
@@ -314,8 +364,9 @@ func webLoginOKHTML(baseURL, cookiePath string) string {
 <ul class="meta">
 <li>已登录到 base_url：<code>%s</code></li>
 <li>cookie_path：<code>%s</code></li>
+%s
 </ul>
-</main></body></html>`, html.EscapeString(baseURL), html.EscapeString(cookiePath))
+</main></body></html>`, html.EscapeString(baseURL), html.EscapeString(cookiePath), extra)
 }
 
 func webLoginFailHTML(err error) string {

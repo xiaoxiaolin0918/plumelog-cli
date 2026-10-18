@@ -20,7 +20,7 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 - Opens the system browser to a tokenized URL; submit username/password once
 - Reuses normal `POST /login` and writes the cookie jar
 - ~120s timeout; listener closes on success or timeout
-- Passwords are not printed, logged, or written to disk
+- Passwords are not printed or logged. Optional **记住并自动登录** encrypts the password into `login.cred` beside config (Windows: DPAPI; other OS: AES-GCM + `login.key` mode 0600). Never plaintext in `config.json`
 - If a session already exists in the jar, pass `--force`
 - Form includes **服务地址** (base URL), prefilled from `--base-url` / `PLUMELOG_BASE_URL` / config / default; the submitted value is used for login and persisted via the normal config write path when it differs
 
@@ -30,4 +30,12 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 
 ### Opt-in auto re-login
 
-`PLUMELOG_AUTO_LOGIN=1` or `--auto-login`: on upstream 401, re-login once from env and replay the request.
+`PLUMELOG_AUTO_LOGIN=1` or `--auto-login`, **or** a remembered credential with `auto_login` from the web form: on upstream 401, re-login once and replay the request.
+
+Credential pairs are **atomic** (username and password from the same source):
+
+1. Both `PLUMELOG_LOGIN_USERNAME` and `PLUMELOG_LOGIN_PASSWORD` (env pair)
+2. Else encrypted `login.cred` as a whole (from web「记住并自动登录」)
+3. Else env/config username + env password only (no mixing with `login.cred`)
+
+A silent-login **402** clears `login.cred` and disables remembered auto-login for the process so a bad password is not retried forever.
