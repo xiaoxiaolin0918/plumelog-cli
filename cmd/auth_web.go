@@ -132,12 +132,10 @@ func (a *App) runWebLogin(cmd *cobra.Command, force bool, deps webLoginDeps) err
 				finish(outcome{err: loginErr})
 				return
 			}
-			if remErr := a.applyWebRemember(user, pass, remember); remErr != nil {
-				_, _ = io.WriteString(w, webLoginFailHTML(remErr))
-				finish(outcome{err: remErr})
-				return
-			}
-			_, _ = io.WriteString(w, webLoginOKHTML(a.baseURL, a.cookiePath, remember))
+			remErr := a.applyWebRemember(user, pass, remember)
+			// Login already succeeded (cookie written). Remember failure must not undo session;
+			// surface it on the success page instead of a hard fail.
+			_, _ = io.WriteString(w, webLoginOKHTML(a.baseURL, a.cookiePath, remember && remErr == nil, remErr))
 			finish(outcome{user: user, pass: pass})
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -350,9 +348,11 @@ func webLoginFormHTML(baseURL, username string, remember bool, errMsg string) st
 </main></body></html>`
 }
 
-func webLoginOKHTML(baseURL, cookiePath string, remembered bool) string {
+func webLoginOKHTML(baseURL, cookiePath string, remembered bool, rememberErr error) string {
 	extra := ""
-	if remembered {
+	if rememberErr != nil {
+		extra = `<li class="err">记住并自动登录未保存（会话已登录）：` + html.EscapeString(rememberErr.Error()) + `</li>`
+	} else if remembered {
 		extra = `<li>已启用记住并自动登录（密码已本机加密保存）</li>`
 	}
 	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title>

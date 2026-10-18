@@ -129,7 +129,7 @@ Discovery:
 	p.StringVar(&a.flagJQ, "jq", "", "jq expression applied to the JSON envelope")
 	p.BoolVar(&a.flagDryRun, "dry-run", false, "print the request and do not send it")
 	p.BoolVarP(&a.flagYes, "yes", "y", false, "confirm a high-risk-write")
-	p.BoolVar(&a.flagAutoLogin, "auto-login", false, "on 401, silent login once from PLUMELOG_LOGIN_* env and replay (env PLUMELOG_AUTO_LOGIN=1)")
+	p.BoolVar(&a.flagAutoLogin, "auto-login", false, "on 401, silent login once from PLUMELOG_LOGIN_* env or encrypted login.cred (web remember) and replay (env PLUMELOG_AUTO_LOGIN=1)")
 	p.StringVar(&a.flagAdminPassword, "admin-password", "", "admin password for deleteQueue/deleteIndex (env PLUMELOG_ADMIN_PASSWORD); never printed")
 	p.StringVar(&a.flagPathPrefix, "path-prefix", "auto", `path prefix: auto, "" (or root), or /plumelog`)
 	p.StringVar(&a.flagCookieJar, "cookie-jar", "", "override the Netscape cookie jar path")
@@ -561,25 +561,14 @@ func isLoginRequest(req client.Request) bool {
 }
 
 // silentLogin POSTs /login once using credentials. Password is never printed.
-// Priority: PLUMELOG_LOGIN_* env > encrypted login.cred > config login_username (user only).
+// Credential pairs are atomic (never mix username from one source with password from another):
+//  1. Both PLUMELOG_LOGIN_USERNAME and PLUMELOG_LOGIN_PASSWORD → env pair
+//  2. Else encrypted login.cred as a whole
+//  3. Else env/config username + env password only (no store)
 func (a *App) silentLogin(cmd *cobra.Command) error {
-	user := strings.TrimSpace(os.Getenv("PLUMELOG_LOGIN_USERNAME"))
-	if user == "" {
-		user = strings.TrimSpace(a.cfg.LoginUsername)
-	}
-	pass := os.Getenv("PLUMELOG_LOGIN_PASSWORD")
-	if pass == "" || user == "" {
-		if c, ok, err := credstore.Load(credstore.DirFromConfigPath(a.configPath)); err == nil && ok {
-			if user == "" {
-				user = strings.TrimSpace(c.Username)
-			}
-			if pass == "" {
-				pass = c.Password
-			}
-		}
-	}
-	if user == "" || pass == "" {
-		return a.fail(cmd, risk.Write, errors.New("auto-login requires PLUMELOG_LOGIN_USERNAME/PASSWORD or a remembered encrypted credential (auth login --web)"))
+	user, pass, err := a.resolveSilentLoginCreds()
+	if err != nil {
+		return a.fail(cmd, risk.Write, err)
 	}
 	a.track(pass)
 	body, err := json.Marshal(map[string]string{"username": user, "password": pass})
@@ -595,7 +584,8 @@ func (a *App) silentLogin(cmd *cobra.Command) error {
 	}
 	if code, ok := client.ResultCode(resp.Body); ok && code == 402 {
 		_ = a.jar.Clear()
-		return a.fail(cmd, risk.Write, errors.New("auto-login invalid credentials (402)"))
+		a.disableRememberedAutoLogin()
+		return a.fail(cmd, risk.Write, errors.New("auto-login invalid credentials (402); remembered credentials cleared"))
 	}
 	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
 		return a.fail(cmd, risk.Write, fmt.Errorf("auto-login server returned code %d", code))
@@ -604,6 +594,37 @@ func (a *App) silentLogin(cmd *cobra.Command) error {
 		return a.fail(cmd, risk.Write, fmt.Errorf("auto-login HTTP %d", resp.Status))
 	}
 	return nil
+}
+
+// resolveSilentLoginCreds returns an atomic username/password pair for silent login.
+func (a *App) resolveSilentLoginCreds() (user, pass string, err error) {
+	envUser := strings.TrimSpace(os.Getenv("PLUMELOG_LOGIN_USERNAME"))
+	envPass := os.Getenv("PLUMELOG_LOGIN_PASSWORD")
+	if envUser != "" && envPass != "" {
+		return envUser, envPass, nil
+	}
+	if c, ok, loadErr := credstore.Load(credstore.DirFromConfigPath(a.configPath)); loadErr == nil && ok {
+		u := strings.TrimSpace(c.Username)
+		if u != "" && c.Password != "" {
+			return u, c.Password, nil
+		}
+	}
+	user = envUser
+	if user == "" {
+		user = strings.TrimSpace(a.cfg.LoginUsername)
+	}
+	pass = envPass
+	if user == "" || pass == "" {
+		return "", "", errors.New("auto-login requires PLUMELOG_LOGIN_USERNAME/PASSWORD or a remembered encrypted credential (auth login --web)")
+	}
+	return user, pass, nil
+}
+
+// disableRememberedAutoLogin clears encrypted login.cred and turns off in-process auto-login
+// after a failed silent login (e.g. 402), so bad passwords are not retried forever.
+func (a *App) disableRememberedAutoLogin() {
+	a.autoLogin = false
+	_ = credstore.Clear(credstore.DirFromConfigPath(a.configPath))
 }
 
 func (a *App) cookieNames() []string {

@@ -32,8 +32,10 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 
 `PLUMELOG_AUTO_LOGIN=1` or `--auto-login`, **or** a remembered credential with `auto_login` from the web form: on upstream 401, re-login once and replay the request.
 
-Credential priority for that silent login:
+Credential pairs are **atomic** (username and password from the same source):
 
-1. `PLUMELOG_LOGIN_USERNAME` / `PLUMELOG_LOGIN_PASSWORD` (env)
-2. Encrypted `login.cred` (from web「记住并自动登录」)
-3. `login_username` in config (username only; never a password field)
+1. Both `PLUMELOG_LOGIN_USERNAME` and `PLUMELOG_LOGIN_PASSWORD` (env pair)
+2. Else encrypted `login.cred` as a whole (from web「记住并自动登录」)
+3. Else env/config username + env password only (no mixing with `login.cred`)
+
+A silent-login **402** clears `login.cred` and disables remembered auto-login for the process so a bad password is not retried forever.

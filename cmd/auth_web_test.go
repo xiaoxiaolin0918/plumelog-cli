@@ -335,7 +335,7 @@ func TestWebLoginPersistsBaseURLFromForm(t *testing.T) {
 }
 
 func TestWebLoginOKHTMLShowsBaseURL(t *testing.T) {
-	html := webLoginOKHTML("http://example.test/pl", `C:\cookies.txt`, false)
+	html := webLoginOKHTML("http://example.test/pl", `C:\cookies.txt`, false, nil)
 	for _, want := range []string{"登录成功", "http://example.test/pl", `C:\cookies.txt`, "base_url"} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("ok HTML missing %q", want)
@@ -528,5 +528,18 @@ func TestWebLoginFormHTMLRememberChecked(t *testing.T) {
 	}
 	if !strings.Contains(html, "checked") {
 		t.Fatal("remember should be checked")
+	}
+}
+
+func TestWebLoginOKHTMLRememberErr(t *testing.T) {
+	html := webLoginOKHTML("http://x", "c.txt", false, errors.New("disk full"))
+	if !strings.Contains(html, "登录成功") {
+		t.Fatalf("still success: %s", html)
+	}
+	if !strings.Contains(html, "未保存") || !strings.Contains(html, "disk full") {
+		t.Fatalf("want remember-fail note: %s", html)
+	}
+	if !strings.Contains(html, "会话已登录") {
+		t.Fatalf("want session-ok note: %s", html)
 	}
 }
