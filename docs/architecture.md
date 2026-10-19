@@ -173,7 +173,7 @@ Index naming: run logs `plume_log_run_YYYYMMDD*`; trace `plume_log_trace_YYYYMMD
 
 ### `--index` without explicit time (Issue #4)
 
-When `--index` is set and the user did **not** pass `--from-time` / `--to-time` / `--range`, the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` (full day) so historical indexes do not silently return 0 hits. Applies to **`query search` and `query dsl`** (DSL body `dtTime` is rewritten). Explicit time flags are not overridden. `--range` is relative to *now*; prefer explicit times for historical indexes. A stderr `note:` may accompany the alignment.
+When `--index` is set and the user did **not** pass `--from-time` / `--to-time` / `--range`, the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` (full day) so historical indexes do not silently return 0 hits. Applies to **`query search` and `query dsl`** (DSL body `dtTime` is rewritten). Explicit time flags are not overridden. `--range` is relative to *now* and also expands body `dtTime` to 24h/7d/30d when times are omitted (Issue #22); prefer explicit times for historical indexes. A stderr `note:` may accompany the alignment.
 
 ---
 

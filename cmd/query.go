@@ -72,9 +72,10 @@ Highlight is on unless --no-highlight.
 When --index is set and none of --from-time/--to-time/--range are given, the CLI
 auto-aligns the dtTime window to the index YYYYMMDD (full calendar day) so
 historical indexes do not silently return 0 hits against "today".
---range (day|week|month) is a server-relative window anchored at now; combining
-it with a historical --index can still miss. Prefer --from-time/--to-time for
-historical indexes. Explicit --from-time/--to-time always win for the body window.
+--range (day|week|month) selects POST /query indices and expands the body dtTime
+window to 24h / 7d / 30d when --from-time/--to-time are omitted (Issue #22).
+Combining --range with a historical --index can still miss; prefer explicit times
+for historical indexes. Explicit --from-time/--to-time always win for the body window.
 --dsl / --dsl-file replaces the generated body and conflicts with shortcut flags.
 On /clientQuery, clientStartDate/clientEndDate select daily indices; they default
 to the configured window (1h) when omitted. A future --to-time is clamped to now.`,
@@ -251,7 +252,15 @@ func (a *App) planSearch(cmd *cobra.Command, f searchFlags, forceTrace bool, siz
 		}
 	}
 
-	fromMS, toMS, err := dsl.ResolveWindow(f.fromTime, f.toTime, a.timeWindow, time.Now())
+	window := a.timeWindow
+	// --range only selected indices historically; body still used default_time_window (1h),
+	// so phrase queries outside that hour returned 0 under --range week/month (Issue #22).
+	if strings.TrimSpace(f.rng) != "" && strings.TrimSpace(f.fromTime) == "" && strings.TrimSpace(f.toTime) == "" {
+		if d, rerr := dsl.RangeWindow(f.rng); rerr == nil {
+			window = d
+		}
+	}
+	fromMS, toMS, err := dsl.ResolveWindow(f.fromTime, f.toTime, window, time.Now())
 	if err != nil {
 		return client.Request{}, err
 	}

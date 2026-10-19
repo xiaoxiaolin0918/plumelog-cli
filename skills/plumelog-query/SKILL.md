@@ -65,7 +65,12 @@ plumelog query dsl --file query.json
 | `--index … --range day\|week\|month` | `--range` 是**相对现在**的服务端窗；与历史索引组合可能仍偏今天 → stderr `warning:`；历史索引请用显式时间 |
 | `--index` 名无 `YYYYMMDD` 且无时间 | stderr `warning:`，避免误判无日志 |
 
-优先级（body 时间窗）：`--from-time/--to-time` > 索引日自动对齐 > `default_time_window`。`--range` 只影响 URL，不替代显式/自动对齐的 body 窗说明。
+优先级（body 时间窗）：`--from-time/--to-time` > 索引日自动对齐 > `--range` 对齐窗（day=24h / week=7d / month=30d）> `default_time_window`。
+
+### `--range` body 窗（Issue #22）
+
+`--range day|week|month` 会改走 `POST /query?range=` **并**把 body `dtTime` 扩到对应跨度（无显式 `--from-time/--to-time` 时）。
+旧行为只扩服务端索引、body 仍用默认 1h，导致引号短语在 week/month 下恒 0（日索引模式正常）。
 
 ```bash
 # 历史索引裸用（推荐）——自动对齐到 2026-10-16 全天
