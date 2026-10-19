@@ -54,6 +54,8 @@ plumelog query dsl --file query.json
 
 未写时间时用 `default_time_window`（默认 1h）选日索引。运行日志索引形如 `plume_log_run_YYYYMMDD`。
 
+宽时间窗跨**缺失日索引**时服务端可能回空 body：CLI 现为 `ok:false` + `error.subtype=empty_body` + `result.hits.total=0`（非零退出），与真·零命中（`ok:true` + ES result）区分（Issue #19）。
+
 ## `--index` 时间窗（Issue #4）
 
 `POST /query` 在**无显式时间**时，服务端容易按「今天」窗处理；历史索引再叠今天窗会**静默 0 条**。

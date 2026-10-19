@@ -38,3 +38,13 @@ Missing `--yes` and/or required `--admin-password` (real run, not dry-run):
 Aligned with yunxiao: stop, ask the user, then retry with `--yes` (and `--admin-password` when the command needs it) only after explicit consent. This is **not** a network/auth error.
 
 Dual admin gate: `admin queue clear` / `admin index delete` (and matching `api` paths) also require `--admin-password`; the hint names both flags when both are missing.
+
+## Empty body / missing index (Issue #19)
+
+When the server returns an **empty HTTP body** (common when the time window spans days with no daily index), the CLI emits:
+
+- ``ok: false`` on **stderr**, exit **non-zero**
+- ``error.type=server``, ``error.subtype=empty_body``
+- ``result.hits`` still present as ``{hits:[], total:0}`` so scripts can read ``result`` without KeyError
+
+True zero hits (index exists, no matching docs) remain ``ok: true`` with a normal ES ``result`` payload.
