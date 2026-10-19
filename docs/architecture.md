@@ -1,8 +1,8 @@
-# plumelog-cli architecture (v0.1.1)
+# plumelog-cli architecture (v0.1.3)
 
 > Contract for the `plumelog` CLI against a [PlumeLog](https://github.com/fayechenlong/plumelog) server (`MainController`, `LoginCheckInterceptor`, `Home.vue`). CLI patterns (cobra, auth/doctor/api, `--dry-run` / `--jq` / `--yes`) follow `yunxiao-cli`.
 >
-> Aligned with **release [v0.1.1](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.1)** / public repo [xiaoxiaolin0918/plumelog-cli](https://github.com/xiaoxiaolin0918/plumelog-cli) (GitHub only; no Origin mirror).
+> Aligned with **release [v0.1.3](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)** / public repo [xiaoxiaolin0918/plumelog-cli](https://github.com/xiaoxiaolin0918/plumelog-cli) (GitHub only; no Origin mirror).
 >
 > **Never** print real passwords, `adminPassWord`, or Session Cookie values in logs, stdout, docs, or `docs/wiki/` examples.
 
@@ -56,7 +56,7 @@ Every command `--help` marks **Risk:** `read` | `write` | `high-risk-write` (`ap
 | License | MIT |
 | Origin | **none** (GitHub only) |
 | Default base URL | `http://localhost:8891` (no trailing slash) |
-| Release documented here | v0.1.1 |
+| Release documented here | v0.1.3 |
 
 ---
 
@@ -110,6 +110,7 @@ Override: `--cookie-jar`. File mode `0600` (Unix).
 | Situation | Exit | Notes |
 |-----------|------|--------|
 | High-risk missing `--yes` (and admin when required) | **10** | `error.subtype=confirmation_required` (also may include `action` / `hint` / `risk`) |
+| Empty upstream body (Issue #19) | non-zero (typically 1) | stderr `ok:false`, `error.type=server`, `error.subtype=empty_body`, `result.hits.total=0` |
 | Other CLI/HTTP failures | non-zero (typically 1) | Read stderr envelope |
 
 `--jq` filters the whole envelope (e.g. `--jq .result`). `--format json|pretty|table`.
@@ -173,7 +174,7 @@ Index naming: run logs `plume_log_run_YYYYMMDD*`; trace `plume_log_trace_YYYYMMD
 
 ### `--index` without explicit time (Issue #4)
 
-When `--index` is set and the user did **not** pass `--from-time` / `--to-time` / `--range`, the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` (full day) so historical indexes do not silently return 0 hits. Applies to **`query search` and `query dsl`** (DSL body `dtTime` is rewritten). Explicit time flags are not overridden. `--range` is relative to *now* and also expands body `dtTime` to 24h/7d/30d when times are omitted (Issue #22); prefer explicit times for historical indexes. A stderr `note:` may accompany the alignment.
+When `--index` is set and the user did **not** pass `--from-time` / `--to-time` / `--range`, the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` (full day) so historical indexes do not silently return 0 hits. Applies to **`query search` and `query dsl`** (DSL body `dtTime` is rewritten). Explicit time flags are not overridden. `--range` is relative to *now* and also expands body `dtTime` to 24h/7d/30d when times are omitted (Issue #22; **month = 30d, not calendar month**); prefer explicit times for historical indexes. A stderr `note:` may accompany the alignment.
 
 ---
 
@@ -203,6 +204,30 @@ Load order for agents: read **plumelog-shared** first, then domain skills (`plum
 `query search` builds `bool.must[]` (optional `must_not` for `--exclude-app`): `match_phrase` on `appName` / `env` / `logLevel` / `traceId` / `className` / `serverName`; `query_string` on `content` (`default_operator: AND`, Issue #23); repeatable `--extend field=value`; `range` on `dtTime`. Default sort `dtTime desc`; with `--trace-id` → `dtTime asc` + `seq asc`. Highlight on unless `--no-highlight`.
 
 Default time window: config `default_time_window` (1h). Future `--to-time` clamped to now.
+
+### 9.1 Human / relative times (Issue #18)
+
+`--from-time` / `--to-time` parse: epoch ms|s, RFC3339, local `YYYY-MM-DD[ HH:MM[:SS]]`, `now`, and relative offsets (`-3d` / `-2h` / `+15m`, etc.). Date-only → local midnight. Relative offsets resolve against wall-clock `now` in the process location.
+
+### 9.2 Empty upstream body (Issue #19)
+
+When the server returns a whitespace-only body, the CLI fails on **stderr** with `ok:false`, `error.type=server`, `error.subtype=empty_body`, and a stub `result.hits.total=0` (avoids script KeyError). A real ES zero-hit JSON body remains `ok:true`.
+
+### 9.3 `query apps` discovery shape (Issue #20)
+
+`result` is always an object `{ apps, count, ... }` (optional `app_like` / `sample` / enrich fields), **not** a bare array (breaking vs ≤0.1.2). Flags: `--app-like` (client filter), `--sample APP` (preview), `--enrich`/`--stats` (N+1 capped at 20). Default list still one `/getAppNames` (or es agg).
+
+### 9.4 `trace get` empty-hit hint (Issue #21)
+
+Zero hits stay `ok:true`; envelope may include `hint` suggesting `query search --trace-id`. Implemented via `invokeTraceGet` / `finishTraceGet`, a **known fork** of `App.invoke` / `finishUpstream` (auto-login + failure paths must stay in sync when the envelope changes). No automatic fallback to the run-log index.
+
+### 9.5 `--range` body window (Issue #22)
+
+`--range day|week|month` selects `POST /query?range=` **and**, when `--from-time`/`--to-time` are omitted, expands body `dtTime` to **24h / 7d / 30d**. Explicit times win for the body window. **`month` = 30 days, not a calendar month.** Prefer explicit times for historical indexes.
+
+### 9.6 Multi-word `-q` AND (Issue #23)
+
+DSL builder always sets `query_string.default_operator: AND`. Explicit Lucene `OR` / `AND` / `NOT` / quoted phrases in the query text are preserved.
 
 ---
 

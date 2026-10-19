@@ -60,6 +60,8 @@ the trace index is empty (e.g. some test envs). If this command returns 0 hits, 
 }
 
 // invokeTraceGet is invoke + empty-hit hint (Issue #21). Prefer hint over auto-fallback.
+// Known fork from App.invoke / finishUpstream: success path may add Hint when hits.total==0.
+// Keep auto-login and auth/HTTP/empty-body failure paths in sync with invoke/finishUpstream when changing the envelope.
 func (a *App) invokeTraceGet(cmd *cobra.Command, req client.Request, traceID string) error {
 	stop, err := a.prepare(cmd, risk.ReadOnly(), &req)
 	if stop || err != nil {
