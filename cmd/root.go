@@ -527,13 +527,36 @@ func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response) error {
 	if resp.Status >= 400 {
 		return a.fail(cmd, "", fmt.Errorf("HTTP %d from %s", resp.Status, client.RedactURL(resp.FinalURL)))
 	}
+	if len(strings.TrimSpace(string(resp.Body))) == 0 {
+		// Empty body usually means the time window spans missing daily indexes.
+		// Do not report ok:true without result (scripts KeyError; Issue #19).
+		hint := "empty body often means the time window spans missing daily indexes; narrow --from-time/--to-time or use --index for a known day"
+		env := output.Envelope{
+			OK: false,
+			Error: output.ErrorBody{
+				Type:    "server",
+				Subtype: "empty_body",
+				Message: "no matching index for window (server returned empty body)",
+				Hint:    hint,
+			},
+			URL:  client.RedactURL(resp.FinalURL),
+			Hint: hint,
+			Result: output.MustResult(map[string]any{
+				"hits": map[string]any{
+					"hits":  []any{},
+					"total": 0,
+				},
+			}),
+		}
+		if err := a.write(cmd, env); err != nil {
+			return err
+		}
+		return &PrintedError{Msg: output.ErrorMessage(env.Error)}
+	}
 	env := output.Envelope{
 		OK:     true,
 		URL:    client.RedactURL(resp.FinalURL),
 		Result: output.RawResult(resp.Body),
-	}
-	if len(strings.TrimSpace(string(resp.Body))) == 0 {
-		env.Hint = "server returned an empty body (often no matching index)"
 	}
 	return a.write(cmd, env)
 }

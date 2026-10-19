@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.3
+version: 0.1.4
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -53,6 +53,8 @@ plumelog query dsl --file query.json
 | `--index` / `--range day\|week\|month` | 改走 `POST /query` |
 
 未写时间时用 `default_time_window`（默认 1h）选日索引。运行日志索引形如 `plume_log_run_YYYYMMDD`。
+
+宽时间窗跨**缺失日索引**时服务端可能回空 body：CLI 现为 `ok:false` + `error.subtype=empty_body` + `result.hits.total=0`（非零退出），与真·零命中（`ok:true` + ES result）区分（Issue #19）。
 
 ## `--index` 时间窗（Issue #4）
 
