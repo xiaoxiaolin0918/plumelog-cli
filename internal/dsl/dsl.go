@@ -242,8 +242,9 @@ func RangeWindow(r string) (time.Duration, error) {
 	}
 }
 
-// ParseTime accepts now, unix milliseconds, unix seconds, RFC3339, or
-// "2006-01-02 15:04:05" / "2006-01-02" in loc.
+// ParseTime accepts now, relative (-3d / -2h / +15m), unix milliseconds,
+// unix seconds, RFC3339 (with offset), or local layouts
+// "2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02" (date-only -> 00:00:00.000 local).
 func ParseTime(s string, now time.Time, loc *time.Location) (time.Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" || s == "now" {
@@ -251,6 +252,11 @@ func ParseTime(s string, now time.Time, loc *time.Location) (time.Time, error) {
 	}
 	if loc == nil {
 		loc = time.Local
+	}
+	if rel, ok, err := parseRelativeTime(s); err != nil {
+		return time.Time{}, err
+	} else if ok {
+		return now.Add(rel), nil
 	}
 	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
 		switch {
@@ -267,12 +273,50 @@ func ParseTime(s string, now time.Time, loc *time.Location) (time.Time, error) {
 			return t, nil
 		}
 	}
-	for _, layout := range []string{"2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02"} {
+	for _, layout := range []string{
+		"2006-01-02T15:04:05",
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02 15:04",
+		"2006-01-02",
+	} {
 		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
 			return t, nil
 		}
 	}
-	return time.Time{}, fmt.Errorf("cannot parse time %q (want ms, RFC3339, or YYYY-MM-DD HH:MM:SS)", s)
+	return time.Time{}, fmt.Errorf("cannot parse time %q (want now, -3d/-2h, ms, RFC3339, or YYYY-MM-DD[ HH:MM[:SS]])", s)
+}
+
+// parseRelativeTime accepts -3d, +2h, -15m, -1h30m (Go duration) relative to now.
+func parseRelativeTime(s string) (time.Duration, bool, error) {
+	if len(s) < 2 || (s[0] != '-' && s[0] != '+') {
+		return 0, false, nil
+	}
+	sign := time.Duration(1)
+	body := s
+	if s[0] == '-' {
+		sign = -1
+		body = s[1:]
+	} else {
+		body = s[1:]
+	}
+	if body == "" {
+		return 0, false, nil
+	}
+	// day unit not in time.ParseDuration
+	if strings.HasSuffix(body, "d") && !strings.ContainsAny(body, "hmsunµn") {
+		n, err := strconv.Atoi(strings.TrimSuffix(body, "d"))
+		if err != nil || n <= 0 {
+			return 0, true, fmt.Errorf("relative time %q", s)
+		}
+		return sign * time.Duration(n) * 24 * time.Hour, true, nil
+	}
+	d, err := time.ParseDuration(body)
+	if err != nil || d <= 0 {
+		// not a relative duration form — let other parsers try (e.g. numeric)
+		return 0, false, nil
+	}
+	return sign * d, true, nil
 }
 
 // ResolveWindow applies the default window and clamps a future to-time to now.

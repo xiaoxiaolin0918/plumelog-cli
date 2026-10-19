@@ -50,8 +50,8 @@ the trace index is empty (e.g. some test envs). If this command returns 0 hits, 
 	}
 	cmd.Flags().StringVar(&f.traceID, "trace-id", "", "traceId to load (required)")
 	cmd.Flags().StringVar(&f.app, "app", "", "optional appName match_phrase")
-	cmd.Flags().StringVar(&f.fromTime, "from-time", "", "clientStartDate")
-	cmd.Flags().StringVar(&f.toTime, "to-time", "", "clientEndDate")
+	cmd.Flags().StringVar(&f.fromTime, "from-time", "", "clientStartDate (now, -3d/-2h, ms, RFC3339, YYYY-MM-DD[ HH:MM[:SS]])")
+	cmd.Flags().StringVar(&f.toTime, "to-time", "", "clientEndDate (same formats as --from-time)")
 	cmd.Flags().IntVar(&f.size, "size", 0, "page size (default 1000)")
 	cmd.Flags().IntVar(&f.from, "from", 0, "page offset")
 	cmd.Flags().BoolVar(&f.noHighlight, "no-highlight", false, "omit the content highlight block")
