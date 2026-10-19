@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)
 
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
 
@@ -35,18 +35,28 @@ go test ./...
 **Go install：**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.2
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.3
 ```
 
-发布说明：[v0.1.2](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)。
+发布说明：[v0.1.3](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)。
 
 
-## 0.1.2 更新摘要
+## 0.1.3 更新摘要
 
-- 中文 `auth login --web`：表单含 **服务地址**（base URL）与可选 **记住并自动登录**（加密写入 `login.cred`；Windows 用 DPAPI，其他平台 AES-GCM）
-- 静默重登凭据成对取值；静默登录遇 `402` 会清除 `login.cred`
-- 相对 v0.1.1 的文档/wiki 整理（仓内 wiki 链接、去掉 BOM）
-- 版本号对齐为 **0.1.2**（此前 main 上仍显示 0.1.0）
+### 破坏性变更
+
+- **`query apps` 的 `result` 形状**：≤0.1.2 时 `result` 多为 **裸 JSON 数组**；0.1.3 起固定为对象 `{ "apps": [...], "count": N, ... }`（可选 `app_like` / `sample` / enrich 字段）。脚本与 `--jq` 请从 `.result[0]` / 把 `.result` 当数组改为 **`.result.apps`**。
+
+### 修复与功能（Issues #18–#23）
+
+- 多词 `-q` / `--content` 使用 Lucene `default_operator: AND`（#23）；显式 `OR` / 引号仍有效
+- `--range day|week|month` 在未给 `--from-time`/`--to-time` 时同步把 body `dtTime` 扩成 **24h / 7d / 30d**（#22）。**`month` = 30 天，不是自然月**
+- 上游空 body → stderr `ok:false`、`error.subtype=empty_body`、`result.hits.total=0`、非零退出（#19）
+- `trace get` 零命中仍 `ok:true`，并提示改用 `query search --trace-id`（#21）
+- `--from-time` / `--to-time` 支持 `now`、相对时间（`-3d` / `-2h` / `+15m`）、RFC3339、本地日期时间、epoch（#18）
+- `query apps --app-like` / `--sample` / `--enrich`（#20）
+
+详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 安全（先读）
 
@@ -116,25 +126,36 @@ plumelog
 ## 查询示例
 
 ```bash
-./plumelog query search --app demo --level ERROR -q timeout \
+./plumelog query search --app demo --level ERROR -q "timeout AND retry" \
   --from-time 2024-01-02T00:00:00Z --to-time 2024-01-02T01:00:00Z
+
+./plumelog query search --from-time -3d --to-time now --level ERROR
 
 ./plumelog query search --dsl-file query.json \
   --from-time 1700000000000 --to-time 1700003600000
 
 ./plumelog query apps --source es
+./plumelog query apps --app-like demo --enrich
 ./plumelog trace get --trace-id TRACE_ID --size 100
 ```
 
-快捷条件与 Home.vue 一致：`appName` / `env` / `logLevel` / `traceId` / `className` / `serverName` 用 `match_phrase`，正文用 `query_string`，`--extend field=value` 可重复，时间打在 `dtTime` 上。`--exclude-app` 把应用放到 `must_not`。
+快捷条件与 Home.vue 一致：`appName` / `env` / `logLevel` / `traceId` / `className` / `serverName` 用 `match_phrase`，正文用 `query_string`（**`default_operator: AND`**，#23），`--extend field=value` 可重复，时间打在 `dtTime` 上。`--exclude-app` 把应用放到 `must_not`。
+
+`--from-time` / `--to-time` 支持 epoch、RFC3339、本地 `YYYY-MM-DD[ HH:MM[:SS]]`、`now`、以及 `-3d` / `-2h` / `+15m` 等相对时间（#18）。仅日期时从本地 00:00 起；未来的 `--to-time` 会被夹到现在。
 
 默认排序 `dtTime desc`。带了 `--trace-id` 则改为 `dtTime asc` + `seq asc`。高亮默认打开，`--no-highlight` 关闭。
 
-不写时间时，索引用最近 `default_time_window`（默认 1 小时）。`--to-time` 若在未来会被夹到当前时间。
+不写时间时，索引用最近 `default_time_window`（默认 1 小时）。
 
-`--index` 或 `--range day|week|month` 会改走 `POST /query`。运行日志索引形如 `plume_log_run_YYYYMMDD`，链路索引形如 `plume_log_trace_YYYYMMDD`。
+`--index` 或 `--range day|week|month` 会改走 `POST /query`。未给显式时间时，`--range` 还会把 body `dtTime` 扩成 **24h / 7d / 30d**（#22）。**`month` = 30 天，不是自然月。** 历史索引请用显式时间。运行日志索引形如 `plume_log_run_YYYYMMDD`，链路索引形如 `plume_log_trace_YYYYMMDD`。
 
-仅 `--index`、无 `--from-time` / `--to-time` / `--range` 时，CLI 按索引名中的 `YYYYMMDD` 自动对齐全天时间窗（避免历史索引静默 0 条）；`query dsl --index` 同样会改写 body 里的 `dtTime`。`--range` 相对「现在」；历史索引请用显式时间。
+仅 `--index`、无 `--from-time` / `--to-time` / `--range` 时，CLI 按索引名中的 `YYYYMMDD` 自动对齐全天时间窗（避免历史索引静默 0 条）；`query dsl --index` 同样会改写 body 里的 `dtTime`。
+
+上游返回空 body 视为失败：stderr `ok:false`、`error.subtype=empty_body`、非零退出（#19）。真正的 ES 零命中仍是 `ok:true`。
+
+**`query apps` 结果形状（相对 ≤0.1.2 破坏）：** `result` 为 `{ "apps": [...], "count": N, ... }`，不是裸数组。请用 `--jq '.result.apps'`。
+
+`trace get` 零命中仍 `ok:true`，并可能给出改用 `query search --trace-id` 的 hint（#21）。
 
 ## Skills（Agent 配套）
 

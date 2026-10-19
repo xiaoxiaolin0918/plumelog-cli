@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
@@ -37,17 +37,27 @@ go test ./...
 **Go install (module path = repo):**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.2
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.3
 ```
 
-Release notes: [v0.1.2](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2).
+Release notes: [v0.1.3](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3).
 
-## What's new in 0.1.2
+## What's new in 0.1.3
 
-- Chinese `auth login --web` UI with **服务地址** (base URL) and **记住并自动登录** (encrypted `login.cred`; Windows DPAPI / elsewhere AES-GCM)
-- Silent re-login credential pairs are atomic; a silent-login `402` clears `login.cred`
-- Docs/wiki polish (in-repo wiki links, BOM strip) since v0.1.1
-- Version string aligned to **0.1.2** (was still reporting 0.1.0 on main)
+### Breaking
+
+- **`query apps` result shape**: in v0.1.2 and earlier, `result` was often a **bare JSON array** of app names. From 0.1.3 it is always an **object**: `{ "apps": [...], "count": N, ... }` (optional `app_like` / `sample` / enrich fields). Migrate scripts and `--jq` from `.result[0]` / treating `.result` as an array to **`.result.apps`**.
+
+### Fixes & features (Issues #18–#23)
+
+- Multi-word `-q` / `--content` uses Lucene `default_operator: AND` (#23); explicit `OR` / quotes still work
+- `--range day|week|month` also expands body `dtTime` to **24h / 7d / 30d** when `--from-time`/`--to-time` are omitted (#22). **`month` means 30 days, not a calendar month**
+- Empty upstream body → stderr `ok:false`, `error.subtype=empty_body`, `result.hits.total=0`, non-zero exit (#19)
+- `trace get` with 0 hits stays `ok:true` and adds a hint to try `query search --trace-id` (#21)
+- `--from-time` / `--to-time` accept `now`, relative (`-3d` / `-2h` / `+15m`), RFC3339, local date/time layouts, and epoch ms|s (#18)
+- `query apps --app-like` / `--sample` / `--enrich` (#20)
+
+See also [CHANGELOG.md](CHANGELOG.md).
 
 ## Security (read this first)
 
@@ -112,25 +122,35 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 
 ## Query
 
-Shortcut filters follow Home.vue: `match_phrase` on `appName`, `env`, `logLevel`, `traceId`, `className`, `serverName`; `query_string` on `content`; repeatable `--extend field=value`; `range` on `dtTime`. `--exclude-app` moves the app clause into `must_not`.
+Shortcut filters follow Home.vue: `match_phrase` on `appName`, `env`, `logLevel`, `traceId`, `className`, `serverName`; `query_string` on `content` with **`default_operator: AND`** (#23); repeatable `--extend field=value`; `range` on `dtTime`. `--exclude-app` moves the app clause into `must_not`.
 
 Default sort is `dtTime desc`. A `--trace-id` switches to `dtTime asc` plus `seq asc`. Highlight is on unless `--no-highlight`.
+
+`--from-time` / `--to-time` accept epoch ms|s, RFC3339, local `YYYY-MM-DD[ HH:MM[:SS]]`, `now`, and relative offsets like `-3d` / `-2h` / `+15m` (#18). Date-only values start at local midnight; a future `--to-time` is clamped to now.
 
 ```bash
 ./plumelog query search --app demo --level ERROR -q "timeout AND retry" \
   --from-time 2024-01-02T00:00:00Z --to-time 2024-01-02T01:00:00Z
 
+./plumelog query search --from-time -3d --to-time now --level ERROR
 ./plumelog query search --dsl-file query.json --from-time 1700000000000 --to-time 1700003600000
 ./plumelog query dsl --file query.json
 ./plumelog query apps
 ./plumelog query apps --source es
+./plumelog query apps --app-like demo --enrich
 ```
 
-`clientStartDate` / `clientEndDate` choose daily indices (`plume_log_run_YYYYMMDD` or, with `--trace`, `plume_log_trace_YYYYMMDD`). They default to the last `default_time_window` (1h). A future `--to-time` is clamped to now.
+`clientStartDate` / `clientEndDate` choose daily indices (`plume_log_run_YYYYMMDD` or, with `--trace`, `plume_log_trace_YYYYMMDD`). They default to the last `default_time_window` (1h).
 
-`--index` or `--range day|week|month` switches the call to `POST /query`.
+`--index` or `--range day|week|month` switches the call to `POST /query`. `--range` is relative to **now** and, when times are omitted, also expands body `dtTime` to **24h / 7d / 30d** (#22). **`month` = 30 days (not a calendar month).** Prefer explicit times for historical indexes.
 
-With `--index` alone (no `--from-time` / `--to-time` / `--range`), the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` so historical indexes do not silently return 0 hits. The same auto-align applies to `query dsl --index`. `--range` is relative to now; prefer explicit times for historical indexes.
+With `--index` alone (no `--from-time` / `--to-time` / `--range`), the CLI auto-aligns the `dtTime` window to the index `YYYYMMDD` so historical indexes do not silently return 0 hits. The same auto-align applies to `query dsl --index`.
+
+An empty upstream body is treated as failure: stderr `ok:false`, `error.subtype=empty_body`, `result.hits.total=0`, non-zero exit (#19). True zero-hit ES responses remain `ok:true`.
+
+**`query apps` result (breaking vs ≤0.1.2):** `result` is `{ "apps": [...], "count": N, ... }`, not a bare array. Use `--jq '.result.apps'`.
+
+`trace get` with zero hits stays `ok:true` and may set `hint` pointing at `query search --trace-id` (#21).
 
 ## Skills (agent companions)
 

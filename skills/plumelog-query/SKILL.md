@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.4
+version: 0.1.5
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -69,7 +69,7 @@ plumelog query dsl --file query.json
 | `--index … --range day\|week\|month` | `--range` 是**相对现在**的服务端窗；与历史索引组合可能仍偏今天 → stderr `warning:`；历史索引请用显式时间 |
 | `--index` 名无 `YYYYMMDD` 且无时间 | stderr `warning:`，避免误判无日志 |
 
-优先级（body 时间窗）：`--from-time/--to-time` > 索引日自动对齐 > `--range` 对齐窗（day=24h / week=7d / month=30d）> `default_time_window`。
+优先级（body 时间窗）：`--from-time/--to-time` > 索引日自动对齐 > `--range` 对齐窗（day=24h / week=7d / month=30d（**month=30 天，不是自然月**））> `default_time_window`。
 
 ### `--range` body 窗（Issue #22）
 
@@ -150,3 +150,11 @@ plumelog query apps --sample zhiyi-iipmes
 | `--enrich` / `--stats` | 可选：每 app 近 24h `last_log_time` + `className_top`（N+1，最多 20） |
 
 默认列表仍是单次 `/getAppNames`（或 es 聚合），不自动 N+1。
+
+**破坏性（相对 ≤0.1.2）：** `result` 不再是裸数组，而是对象：
+
+```json
+{ "apps": ["demo", "..."], "count": 2 }
+```
+
+脚本 / `--jq`：`.result[0]` → **`.result.apps`**（例如 `--jq '.result.apps'`）。

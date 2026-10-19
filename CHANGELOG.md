@@ -1,0 +1,38 @@
+# Changelog
+
+All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
+
+## [0.1.3] - 2026-10-19
+
+### Breaking
+
+- **`query apps` result shape**: `result` is now always `{ "apps": [...], "count": N, ... }` (optional `app_like` / `sample` / enrich fields). Previously (≤0.1.2) cache-source responses often exposed `result` as a **bare JSON array**. Migrate `--jq` / scripts from `.result[0]` to **`.result.apps`**.
+
+### Added
+
+- Human-readable and relative `--from-time` / `--to-time` (`now`, `-3d`, `-2h`, `+15m`, RFC3339, local date layouts, epoch) — Issue #18
+- `query apps --app-like` / `--sample` / `--enrich` — Issue #20
+- `trace get` zero-hit `hint` pointing at `query search --trace-id` — Issue #21
+
+### Fixed
+
+- Multi-word `-q` / `--content` now sets Lucene `default_operator: AND` — Issue #23
+- `--range day|week|month` expands body `dtTime` to 24h / 7d / **30d** when times are omitted (`month` = 30 days, not calendar month) — Issue #22
+- Empty upstream body → `ok:false`, `error.subtype=empty_body`, non-zero exit (stub `result.hits`) — Issue #19
+
+### Docs
+
+- README / README.zh-CN / `docs/architecture.md` / skills aligned to #18–#23; version identity **0.1.3**
+
+## [0.1.2] - 2026-10-19
+
+- Bump CLI version identity to **0.1.2**
+- Web login: Chinese UI, 服务地址, 记住并自动登录 with encrypted `login.cred`
+- Docs/wiki polish since v0.1.1
+
+## [0.1.1] - earlier
+
+- See GitHub Releases for prior notes.
+
+[0.1.3]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3
+[0.1.2]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2
