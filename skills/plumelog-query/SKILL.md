@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.3
+version: 0.1.4
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -43,7 +43,7 @@ plumelog query dsl --file query.json
 | `--trace-id` | `match_phrase` `traceId`；排序改 `dtTime asc, seq asc` |
 | `--class` / `--class-name` | `match_phrase` `className` |
 | `--server` / `--server-name` | `match_phrase` `serverName` |
-| `-q` / `--content` | `query_string` on `content`；含 `.` 自动 `*...*`；`--content-wildcard` 强制包裸片段（结构化不包）；`--no-content-auto-wildcard` 关自动 |
+| `-q` / `--content` | `query_string` on `content`，`default_operator: AND`（#23）；含 `.` 自动 `*...*`；`--content-wildcard` 强制包裸片段（结构化不包）；`--no-content-auto-wildcard` 关自动 |
 | `--extend field=value`（可重复） | `match_phrase` 扩展/MDC 字段 |
 | `--from-time` / `--to-time` | `range` on `dtTime` + clientStart/EndDate；未来 `to` 夹到 now |
 | `--size` / `--from` | 分页（默认 size 100 或 config `default_size`） |
@@ -80,6 +80,19 @@ plumelog query search --index plume_log_run_20261016 --from-time 2026-10-16 --to
 ```bash
 # raw DSL + 历史索引：body 也会带上索引日 dtTime
 echo '{"query":{"match_all":{}}}' | plumelog query dsl --index plume_log_run_20261016 --size 1
+
+## `-q` 多词默认 AND（Issue #23）
+
+多词 `-q` 不带引号时，ES `query_string` 默认 **OR**，常见 token 会假命中。
+CLI 在构造 body 时固定 `default_operator: AND`（与 #1 dotted 通配同一构造路径）。
+显式 `OR` / `AND` / `NOT` / 引号短语仍按 Lucene 语义；精确短语继续用引号。
+
+```bash
+# 多词：现在要求同时含各 token（不再 OR 假命中）
+plumelog query search -q "Column index out of range" --size 5
+# 精确短语
+plumelog query search -q '"Column index out of range"' --size 5
+```
 
 ## `-q` / `--content` 分词陷阱（Issue #1）
 

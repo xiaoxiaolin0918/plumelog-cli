@@ -58,7 +58,7 @@ func (a *App) newSearchCmd() *cobra.Command {
 		Long: `Build an Elasticsearch bool query the way Home.vue does and POST /clientQuery.
 
 Shortcut filters become match_phrase clauses (appName, env, logLevel, traceId,
-className, serverName), a query_string on content, match_phrase extend fields,
+className, serverName), a query_string on content (default_operator AND), match_phrase extend fields,
 and a dtTime range. --exclude-app moves appName into must_not.
 A dotted -q identifier (e.g. java.lang.OutOfMemoryError) is auto-wrapped as *...* so
 ES wildcards can match the analyzed token; use --content-wildcard to force *value*
@@ -176,7 +176,7 @@ func bindSearchFlags(cmd *cobra.Command, f *searchFlags) {
 	cmd.Flags().StringVar(&f.className, "class-name", "", "alias of --class")
 	cmd.Flags().StringVar(&f.server, "server", "", "serverName match_phrase")
 	cmd.Flags().StringVar(&f.serverName, "server-name", "", "alias of --server")
-	cmd.Flags().StringVarP(&f.content, "content", "q", "", "query_string on content; dotted identifiers auto-wrap as *value* (see --content-wildcard / --no-content-auto-wildcard)")
+	cmd.Flags().StringVarP(&f.content, "content", "q", "", "query_string on content (default_operator AND); dotted identifiers auto-wrap as *value* (see --content-wildcard / --no-content-auto-wildcard)")
 	cmd.Flags().BoolVar(&f.contentWildcard, "content-wildcard", false, "wrap bare -q as *value* for ES wildcard matching; structured query_string (AND/OR, field:value, quotes) is left unchanged")
 	cmd.Flags().BoolVar(&f.noContentAutoWildcard, "no-content-auto-wildcard", false, "disable automatic *...* wrapping for dotted -q identifiers")
 	cmd.Flags().StringArrayVar(&f.extend, "extend", nil, "repeatable field=value match_phrase for an extend/MDC field")
