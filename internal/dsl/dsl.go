@@ -79,10 +79,13 @@ func Build(s Search) ([]byte, error) {
 		must = append(must, matchPhrase(field, value))
 	}
 	if v := NormalizeContent(s.Content, s.ContentWildcard, s.NoContentAutoWildcard); v != "" {
+		// default_operator AND: multi-word unquoted -q would otherwise OR (ES default)
+		// and produce false hits (Issue #23). Explicit Lucene OR/AND/NOT still work.
 		must = append(must, map[string]any{
 			"query_string": map[string]any{
-				"query":         v,
-				"default_field": "content",
+				"query":            v,
+				"default_field":    "content",
+				"default_operator": "AND",
 			},
 		})
 	}

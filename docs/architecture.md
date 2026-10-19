@@ -200,7 +200,7 @@ Load order for agents: read **plumelog-shared** first, then domain skills (`plum
 
 ## 9. Query shortcuts (Home.vue alignment)
 
-`query search` builds `bool.must[]` (optional `must_not` for `--exclude-app`): `match_phrase` on `appName` / `env` / `logLevel` / `traceId` / `className` / `serverName`; `query_string` on `content`; repeatable `--extend field=value`; `range` on `dtTime`. Default sort `dtTime desc`; with `--trace-id` → `dtTime asc` + `seq asc`. Highlight on unless `--no-highlight`.
+`query search` builds `bool.must[]` (optional `must_not` for `--exclude-app`): `match_phrase` on `appName` / `env` / `logLevel` / `traceId` / `className` / `serverName`; `query_string` on `content` (`default_operator: AND`, Issue #23); repeatable `--extend field=value`; `range` on `dtTime`. Default sort `dtTime desc`; with `--trace-id` → `dtTime asc` + `seq asc`. Highlight on unless `--no-highlight`.
 
 Default time window: config `default_time_window` (1h). Future `--to-time` clamped to now.
 
