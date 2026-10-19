@@ -420,28 +420,3 @@ func sampleMetaFromHits(body []byte) (last string, classes []string) {
 	}
 	return last, classes
 }
-
-// esHitsTotal reads Elasticsearch hits.total (number or {value,relation}).
-func esHitsTotal(body []byte) (int64, bool) {
-	var root map[string]any
-	if err := json.Unmarshal(body, &root); err != nil {
-		return 0, false
-	}
-	hits, ok := root["hits"].(map[string]any)
-	if !ok {
-		return 0, false
-	}
-	switch v := hits["total"].(type) {
-	case float64:
-		return int64(v), true
-	case map[string]any:
-		switch n := v["value"].(type) {
-		case float64:
-			return int64(n), true
-		default:
-			return 0, false
-		}
-	default:
-		return 0, false
-	}
-}

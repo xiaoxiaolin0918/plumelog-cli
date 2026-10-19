@@ -47,7 +47,7 @@ plumelog query dsl --file query.json
 | `--server` / `--server-name` | `match_phrase` `serverName` |
 | `-q` / `--content` | `query_string` on `content`，`default_operator: AND`（#23）；含 `.` 自动 `*...*`；`--content-wildcard` 强制包裸片段（结构化不包）；`--no-content-auto-wildcard` 关自动 |
 | `--extend field=value`（可重复） | `match_phrase` 扩展/MDC 字段 |
-| `--from-time` / `--to-time` | `range` on `dtTime` + clientStart/EndDate；未来 `to` 夹到 now |
+| `--from-time` / `--to-time` | `range` on `dtTime` + clientStart/EndDate；支持 `now` / `-3d` / `-2h` / RFC3339 / `YYYY-MM-DD[ HH:MM[:SS]]` / epoch ms\|s；日期仅到本地 00:00；未来 `to` 夹到 now（#18） |
 | `--size` / `--from` | 分页（默认 size 100 或 config `default_size`） |
 | `--sort` | 覆盖排序；默认 `dtTime desc` |
 | `--no-highlight` | 关闭 content highlight |
@@ -93,7 +93,7 @@ echo '{"query":{"match_all":{}}}' | plumelog query dsl --index plume_log_run_202
 ## `-q` 多词默认 AND（Issue #23）
 
 多词 `-q` 不带引号时，ES `query_string` 默认 **OR**，常见 token 会假命中。
-CLI 在构造 body 时固定 `default_operator: AND`（与 #1 dotted 通配同一构造路径）。
+CLI 在构建 body 时固定 `default_operator: AND`（与 #1 dotted 通配同一构造路径）。
 显式 `OR` / `AND` / `NOT` / 引号短语仍按 Lucene 语义；精确短语继续用引号。
 
 ```bash
@@ -103,6 +103,18 @@ plumelog query search -q "Column index out of range" --size 5
 plumelog query search -q '"Column index out of range"' --size 5
 ```
 
+## 时间格式（Issue #18）
+
+```bash
+plumelog query search --from-time 2026-10-16 --to-time now --size 5
+plumelog query search --from-time -3d --to-time now --level ERROR
+plumelog query search --from-time "2026-10-16 00:00" --to-time "2026-10-16 23:59"
+plumelog query search --from-time 1700000000000 --to-time 1700003600000
+```
+
+- 纯数字：>=1e12 -> 毫秒；>=1e9 -> 秒
+- 相对：`-3d` / `-2h` / `+15m` / `now`（相对本机 now）
+- 仅日期：本地时区当天 `00:00:00.000`
 ## `-q` / `--content` 分词陷阱（Issue #1）
 
 `-q` 走 ES `query_string`（`default_field: content`）。standard analyzer 会把
