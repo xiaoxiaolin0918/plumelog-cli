@@ -20,7 +20,7 @@ metadata:
 |------|------|------|
 | `query search` | 快捷过滤 → ES bool，默认 `POST /clientQuery` | read |
 | `query dsl` | 原始 DSL（`--file` / stdin / `--dsl`） | read |
-| `query apps` | 应用名：`cache`→`/getAppNames`，`es`→`/queryAppNames` | read |
+| `query apps` | 应用名：`cache`→`/getAppNames`，`es`→`/queryAppNames`；`--app-like` / `--sample` / `--enrich`（#20） | read |
 
 ```bash
 plumelog query search --app demo --level ERROR -q timeout
@@ -30,6 +30,8 @@ plumelog query search --index plume_log_run_20240101 --app demo
 plumelog query search --index plume_log_run_20240101 --from-time 2024-01-01 --to-time 2024-01-02 --app demo
 plumelog query apps
 plumelog query apps --source es
+plumelog query apps --app-like iipmes
+plumelog query apps --sample zhiyi-iipmes
 plumelog query dsl --file query.json
 ```
 
@@ -121,3 +123,18 @@ plumelog query search -q OutOfMemoryError --content-wildcard --size 1 --jq '.res
 plumelog query search -q 'java.lang.OutOfMemoryError' --size 1 --jq '.result.hits.total'
 plumelog query search -q 'java.lang.OutOfMemoryError' --no-content-auto-wildcard --size 1
 ```
+## query apps 选型（Issue #20）
+
+```bash
+plumelog query apps --app-like iipmes
+plumelog query apps --app-like zhiyi --enrich
+plumelog query apps --sample zhiyi-iipmes
+```
+
+| Flag | 行为 |
+|------|------|
+| `--app-like SUBSTR` | 客户端过滤（大小写不敏感） |
+| `--sample APP` | 近 24h 该 app 预览几条（className/content） |
+| `--enrich` / `--stats` | 可选：每 app 近 24h `last_log_time` + `className_top`（N+1，最多 20） |
+
+默认列表仍是单次 `/getAppNames`（或 es 聚合），不自动 N+1。

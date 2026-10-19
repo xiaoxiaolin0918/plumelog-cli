@@ -134,26 +134,6 @@ rewrites the raw body the same way query search does (stderr note:).`,
 	return cmd
 }
 
-func (a *App) newAppsCmd(use string) *cobra.Command {
-	var source string
-	cmd := &cobra.Command{
-		Use:  use,
-		Long: "cache (default) calls POST /getAppNames. es calls POST /queryAppNames with the Home.vue terms aggregation on appNameWithEnv.",
-		Example: `  plumelog query apps
-  plumelog query apps --source es`,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			req, err := appsRequest(source)
-			if err != nil {
-				return a.fail(cmd, risk.Read, err)
-			}
-			return a.invoke(cmd, risk.ReadOnly(), req)
-		},
-	}
-	cmd.Flags().StringVar(&source, "source", "cache", "cache (getAppNames) or es (queryAppNames)")
-	mark(cmd, risk.Read, "List application names")
-	return cmd
-}
-
 func appsRequest(source string) (client.Request, error) {
 	switch source {
 	case "", "cache":
