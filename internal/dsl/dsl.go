@@ -222,6 +222,23 @@ func ParseWindow(s string) (time.Duration, error) {
 	return d, nil
 }
 
+// RangeWindow returns the body dtTime window that matches --range day|week|month.
+// Without this, --range only expands server indices while the body still used
+// default_time_window (often 1h), so phrase queries outside that hour returned 0
+// (Issue #22).
+func RangeWindow(r string) (time.Duration, error) {
+	switch strings.TrimSpace(strings.ToLower(r)) {
+	case "day":
+		return 24 * time.Hour, nil
+	case "week":
+		return 7 * 24 * time.Hour, nil
+	case "month":
+		return 30 * 24 * time.Hour, nil
+	default:
+		return 0, fmt.Errorf("--range must be day, week, or month")
+	}
+}
+
 // ParseTime accepts now, unix milliseconds, unix seconds, RFC3339, or
 // "2006-01-02 15:04:05" / "2006-01-02" in loc.
 func ParseTime(s string, now time.Time, loc *time.Location) (time.Time, error) {
