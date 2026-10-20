@@ -1,6 +1,6 @@
 ---
 name: plumelog-api
-version: 0.1.0
+version: 0.1.1
 description: "PlumeLog raw HTTP escape hatch: api METHOD path with path-prefix auto, --body/--body-file/--query/--header. Destructive paths are high-risk-write."
 metadata:
   requires:

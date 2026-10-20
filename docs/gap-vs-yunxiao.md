@@ -1,6 +1,6 @@
 # plumelog-cli 相对 yunxiao-cli 完善清单
 
-> 日期：2026-10-16（Asia/Shanghai）  
+> 日期：2026-10-20（更新：单实例声明 + Release 二进制）（Asia/Shanghai）  
 > 对照：`D:\work\grokbot\yunxiao-cli`（skills / shared 契约 / doctor 命令面）  
 > 依据：本机 `plumelog --help` 与子命令、实测门禁、`docs/architecture.md`、`docs/qa-run-*.md`、架构简报 `/workspace/plumelog-skills-gap.md`  
 > **禁止**在本文写入真实密码 / Cookie。
@@ -17,7 +17,7 @@
 | config get/set/path/show | ✅ | ✅ |
 | `--dry-run` / `--jq` / `--yes` | ✅ | ✅ |
 | confirmation_required + exit 10 | ✅ | ✅ exit **10** + `error.subtype=confirmation_required` |
-| profile / +onboard | ✅ | ❌ |
+| profile / +onboard | ✅ | ❌ 单实例 + env/config（**明确不做** onboard） |
 | skills list/install + 随包 | ✅ | ✅ `plumelog skills list|read|path|install` |
 | update / self-update | ✅ | ❌（`go build`） |
 | smoke-checklist.md | ✅ | ✅（本轮新增短页） |
@@ -53,8 +53,8 @@
 ## P2
 
 - [x] **根级 `whoami`**：别名封装 `auth status`（base_url / authenticated / has_cookie / cookie_path / path_prefix）
-- [ ] **轻量 multi-profile** 或文档声明「单实例用 env/config，不做 +onboard」
-- [ ] **`plumelog update` / self-update**：含旁路刷新 `skills/`（运维仓可暂用 `go build`）
+- [x] **multi-profile**：文档声明「单实例 + env/config，不做 +onboard」（README / architecture / 本文）——**不实现**
+- [ ] **`plumelog update` / self-update**：仍无；**已有** tag 触发的多平台 Release 资产（`.github/workflows/release.yml`）+ `go install`
 - [ ] **alias 子系统**（禁止嵌入 `--yes`）— 低优
 - [ ] **Agent 非 TTY 环境变量**（`PLUMELOG_NO_TUI` 等）— 默认已是 JSON，影响小
 - [x] 质检 Minor 已记：门禁 JSON 有 subtype；已有 whoami；已有 smoke 短页

@@ -60,53 +60,25 @@ the trace index is empty (e.g. some test envs). If this command returns 0 hits, 
 }
 
 // invokeTraceGet is invoke + empty-hit hint (Issue #21). Prefer hint over auto-fallback.
-// Known fork from App.invoke / finishUpstream: success path may add Hint when hits.total==0.
-// Keep auto-login and auth/HTTP/empty-body failure paths in sync with invoke/finishUpstream when changing the envelope.
+// Uses shared doWithAutoLogin + finishUpstream; only the success enricher is trace-specific.
 func (a *App) invokeTraceGet(cmd *cobra.Command, req client.Request, traceID string) error {
 	stop, err := a.prepare(cmd, risk.ReadOnly(), &req)
 	if stop || err != nil {
 		return err
 	}
-	resp, err := a.do(cmd, req)
+	resp, err := a.doWithAutoLogin(cmd, req)
 	if err != nil {
 		return err
 	}
-	if a.autoLogin && !a.dryRun && isUnauthorized(resp) && !isLoginRequest(req) {
-		if err := a.silentLogin(cmd); err != nil {
-			return err
+	id := strings.TrimSpace(traceID)
+	return a.finishUpstream(cmd, resp, func(env *output.Envelope, resp client.Response) {
+		if total, ok := esHitsTotal(resp.Body); ok && total == 0 {
+			env.Hint = fmt.Sprintf(
+				"trace index returned 0 hits for %s; try run-log search: plumelog query search --trace-id %s",
+				id, id,
+			)
 		}
-		resp, err = a.do(cmd, req)
-		if err != nil {
-			return err
-		}
-	}
-	return a.finishTraceGet(cmd, resp, traceID)
-}
-
-func (a *App) finishTraceGet(cmd *cobra.Command, resp client.Response, traceID string) error {
-	// Reuse failure paths from finishUpstream for auth/HTTP errors.
-	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
-		return a.finishUpstream(cmd, resp)
-	}
-	if resp.Status >= 400 {
-		return a.finishUpstream(cmd, resp)
-	}
-	if len(strings.TrimSpace(string(resp.Body))) == 0 {
-		return a.finishUpstream(cmd, resp)
-	}
-	env := output.Envelope{
-		OK:     true,
-		URL:    client.RedactURL(resp.FinalURL),
-		Result: output.RawResult(resp.Body),
-	}
-	if total, ok := esHitsTotal(resp.Body); ok && total == 0 {
-		id := strings.TrimSpace(traceID)
-		env.Hint = fmt.Sprintf(
-			"trace index returned 0 hits for %s; try run-log search: plumelog query search --trace-id %s",
-			id, id,
-		)
-	}
-	return a.write(cmd, env)
+	})
 }
 
 // esHitsTotal reads Elasticsearch hits.total (number or {value,relation}).

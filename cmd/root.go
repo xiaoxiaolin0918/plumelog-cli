@@ -472,20 +472,27 @@ func (a *App) invoke(cmd *cobra.Command, policy risk.Policy, req client.Request)
 	if stop || err != nil {
 		return err
 	}
-	resp, err := a.do(cmd, req)
+	resp, err := a.doWithAutoLogin(cmd, req)
 	if err != nil {
 		return err
 	}
+	return a.finishUpstream(cmd, resp)
+}
+
+// doWithAutoLogin performs req once; on 401 with auto-login enabled, silent-login once and replay.
+// Shared by invoke, invokeTraceGet, and query apps so auth retry stays in one place.
+func (a *App) doWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Response, error) {
+	resp, err := a.do(cmd, req)
+	if err != nil {
+		return resp, err
+	}
 	if a.autoLogin && !a.dryRun && isUnauthorized(resp) && !isLoginRequest(req) {
 		if err := a.silentLogin(cmd); err != nil {
-			return err
+			return client.Response{}, err
 		}
-		resp, err = a.do(cmd, req)
-		if err != nil {
-			return err
-		}
+		return a.do(cmd, req)
 	}
-	return a.finishUpstream(cmd, resp)
+	return resp, nil
 }
 
 func (a *App) do(cmd *cobra.Command, req client.Request) (client.Response, error) {
@@ -499,7 +506,10 @@ func (a *App) do(cmd *cobra.Command, req client.Request) (client.Response, error
 	return resp, nil
 }
 
-func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response) error {
+// successEnricher optionally mutates a successful Envelope (e.g. trace empty-hit hint).
+type successEnricher func(env *output.Envelope, resp client.Response)
+
+func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response, enrich ...successEnricher) error {
 	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
 		hint := ""
 		switch code {
@@ -557,6 +567,11 @@ func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response) error {
 		OK:     true,
 		URL:    client.RedactURL(resp.FinalURL),
 		Result: output.RawResult(resp.Body),
+	}
+	for _, e := range enrich {
+		if e != nil {
+			e(&env, resp)
+		}
 	}
 	return a.write(cmd, env)
 }

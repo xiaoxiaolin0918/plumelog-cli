@@ -1,6 +1,6 @@
 # plumelog-cli smoke checklist
 
-发版 / 本机构建后的短手跑清单。详细验收见 `docs/qa-checklist.md`。  
+发版 / 本机构建后的短手跑清单。详细验收见现行 `docs/qa-checklist.md`（已按 v0.1.3+ 重写；勿再用早期「源码未齐」长表）。  
 **禁止**在记录中粘贴密码或 Cookie 值。
 
 默认二进制：仓库根 `plumelog` / `plumelog.exe`。

@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
@@ -37,27 +37,23 @@ go test ./...
 **Go install (module path = repo):**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.3
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
+
+Or download a platform binary from the [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) page (linux/darwin/windows; see `checksums.txt`). There is no self-update command.
 ```
 
-Release notes: [v0.1.3](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3).
+Release notes: [v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4).
 
-## What's new in 0.1.3
+## What's new in 0.1.4
 
-### Breaking
+- **Release binaries**: tagging `v*` runs GitHub Actions to publish multi-platform binaries + checksums (still fine to use `go install`)
+- **trace get** / **query apps** share one auto-login + finish path (fewer envelope forks)
+- Docs: qa-checklist rewritten; **single-instance** config only (no multi-profile / onboard)
+- Skills admin/alarm/api/app bumped to **0.1.1**
 
-- **`query apps` result shape**: in v0.1.2 and earlier, `result` was often a **bare JSON array** of app names. From 0.1.3 it is always an **object**: `{ "apps": [...], "count": N, ... }` (optional `app_like` / `sample` / enrich fields). Migrate scripts and `--jq` from `.result[0]` / treating `.result` as an array to **`.result.apps`**.
+### Breaking note carried from 0.1.3
 
-### Fixes & features (Issues #18–#23)
-
-- Multi-word `-q` / `--content` uses Lucene `default_operator: AND` (#23); explicit `OR` / quotes still work
-- `--range day|week|month` also expands body `dtTime` to **24h / 7d / 30d** when `--from-time`/`--to-time` are omitted (#22). **`month` means 30 days, not a calendar month**
-- Empty upstream body → stderr `ok:false`, `error.subtype=empty_body`, `result.hits.total=0`, non-zero exit (#19)
-- `trace get` with 0 hits stays `ok:true` and adds a hint to try `query search --trace-id` (#21)
-- `--from-time` / `--to-time` accept `now`, relative (`-3d` / `-2h` / `+15m`), RFC3339, local date/time layouts, and epoch ms|s (#18)
-- `query apps --app-like` / `--sample` / `--enrich` (#20)
-
-See also [CHANGELOG.md](CHANGELOG.md).
+- **`query apps` result shape**: `result` is `{ "apps": [...], "count": N, ... }` — use `.result.apps` (not a bare array)
 
 ## Security (read this first)
 
@@ -196,6 +192,9 @@ Also high-risk (`--yes` only): `admin index reset`, `admin delete-by-query`, `al
 Success is a JSON envelope on **stdout**: `{"ok":true,"result":...}`. Failures write JSON to **stderr** with an **object** `error` (`{"ok":false,"error":{"type":"cli","message":"..."},...}`). Missing `--yes` on a high-risk-write exits **10** with `error.subtype=confirmation_required` (also on stderr). `--format pretty` indents it. `--format table` prints an array of objects as TSV when it can. `--jq` filters the envelope (for example `--jq .result`).
 
 ## Config and cookies
+
+**Single instance only:** one `config.json` + `PLUMELOG_*` environment variables. There is **no** named multi-profile / `+onboard` flow (unlike yunxiao-cli). See [`docs/gap-vs-yunxiao.md`](docs/gap-vs-yunxiao.md).
+
 
 | | Unix | Windows |
 |--|------|---------|
