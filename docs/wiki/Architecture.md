@@ -11,7 +11,7 @@ Canonical in-repo document (this page is a short index):
 - **Envelope:** success on stdout `{ok,result}`; failures on stderr with object `error`
 - **Gates:** Risk labels; `--dry-run` / `--yes` / `--admin-password`; missing confirm → **exit 10** + `confirmation_required`
 - **Skills:** embed + `list|read|path|install|update` with semver `--check`
-- **Hosting:** PUBLIC GitHub only (no Origin); docs live in-repo under [`docs/wiki/`](README.md) (not GitHub Wiki)
+- **Hosting:** PUBLIC GitHub only (no Origin); docs live in-repo under [`docs/wiki/`](README.md). **GitHub Wiki deprecated/disabled**.
 - **Query:** `--index` without a time window auto-aligns `dtTime` to the index date (search + dsl)
 
 See also [Auth](Auth.md), [Skills-for-AI](Skills-for-AI.md), [Getting-Started](Getting-Started.md).

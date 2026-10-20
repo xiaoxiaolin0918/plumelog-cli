@@ -255,6 +255,6 @@ DSL builder always sets `query_string.default_operator: AND`. Explicit Lucene `O
 | [skills/README.md](../skills/README.md) / `skills/plumelog-shared` | Agent contracts |
 | [docs/smoke-checklist.md](smoke-checklist.md) | Release smoke (exit **10** + `confirmation_required`) |
 | [SECURITY.md](../SECURITY.md) / [CONTRIBUTING.md](../CONTRIBUTING.md) | Vulnerability reports / contrib |
-| [docs/wiki/](wiki/README.md) | In-repo pages: Home, Getting-Started, Auth, Skills-for-AI, Architecture (not GitHub Wiki) |
+| [docs/wiki/](wiki/README.md) | **Only** docs source of truth (GitHub Wiki deprecated/disabled). Home, Getting-Started, Auth, Skills-for-AI, Architecture |
 
 Upstream references (PlumeLog server/UI): `MainController`, `LoginCheckInterceptor`, `Home.vue` (`getShouldFilter` / `clientQuery`), `http.js` (`withCredentials`).

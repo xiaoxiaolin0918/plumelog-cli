@@ -22,7 +22,7 @@ plumelog-cli/
   internal/            # 客户端、配置、鉴权、风险门、version 等
   docs/
     architecture.md    # 架构契约
-    wiki/              # 仓内 wiki（非 GitHub Wiki）
+    wiki/              # 唯一正文（GitHub Wiki 已废止）
     smoke-checklist.md
   skills/              # 随二进制打包的 agent skill markdown
   .github/workflows/   # ci.yml（go test）
