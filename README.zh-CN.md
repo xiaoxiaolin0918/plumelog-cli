@@ -217,7 +217,7 @@ URL = `base_url + path_prefix + path`。`--path-prefix` 默认 `auto`：先试 `
 
 ## 文档
 
-面向人类与 AI 的说明写在**本仓库** [docs/wiki/](docs/wiki/README.md)（入口 [Home.zh-CN](docs/wiki/Home.zh-CN.md) / [Home](docs/wiki/Home.md)），**不是** GitHub Wiki。
+面向人类与 AI 的说明写在**本仓库** [docs/wiki/](docs/wiki/README.md)（入口 [Home.zh-CN](docs/wiki/Home.zh-CN.md) / [Home](docs/wiki/Home.md)），。**GitHub Wiki 已废止并关闭**；唯一正文为 `docs/wiki/`。。
 
 - [快速开始](docs/wiki/Getting-Started.md)
 - [鉴权 Auth](docs/wiki/Auth.md)（Session Cookie、`auth login --web`）

@@ -1,6 +1,6 @@
 # In-repo docs (`docs/wiki/`)
 
-These pages live **in this repository** under `docs/wiki/`. They are **not** the GitHub Wiki (`.wiki.git`). Browse them on GitHub or clone the repo.
+These pages live **in this repository** under `docs/wiki/`. This is the **only** documentation source of truth. **GitHub Wiki is deprecated and disabled** (`has_wiki=false`); do not use or push `.wiki.git`. Browse these pages on GitHub or clone the repo.
 
 | Page | Audience |
 |------|----------|

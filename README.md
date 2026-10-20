@@ -224,7 +224,7 @@ Precedence: flags, then environment, then `config.json`, then defaults. Default 
 
 ## Documentation
 
-Human- and agent-oriented pages live **in this repository** under [docs/wiki/](docs/wiki/README.md) (start at [Home](docs/wiki/Home.md)). They are **not** the GitHub Wiki.
+Human- and agent-oriented pages live **in this repository** under [docs/wiki/](docs/wiki/README.md) (start at [Home](docs/wiki/Home.md)). **GitHub Wiki is deprecated and disabled**; docs/wiki/ is the only source of truth.
 
 - [Getting Started](docs/wiki/Getting-Started.md)
 - [Auth](docs/wiki/Auth.md) (session cookie, `auth login --web`)

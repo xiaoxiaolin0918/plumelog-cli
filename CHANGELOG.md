@@ -1,5 +1,12 @@
 # Changelog
 
+
+## Unreleased
+
+### Docs
+
+- **GitHub Wiki deprecated/disabled**; sole docs source is in-repo `docs/wiki/`.
+
 All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
 
 ## [0.1.3] - 2026-10-19
