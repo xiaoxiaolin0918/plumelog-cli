@@ -46,7 +46,7 @@ go build -o plumelog.exe .
 .\plumelog.exe version
 ```
 
-- 当前发布线：**v0.1.2**（`internal/version/version.go` 的 `Version` 必须与 tag 对齐；发版准备 PR 只 bump + docs，**不**在准备分支上打 tag / 建 GitHub Release）
+- 当前发布线：**v0.1.4**（`internal/version/version.go` 的 `Version` 必须与 tag 对齐；发版准备 PR 只 bump + docs，**不**在准备分支上打 tag / 建 GitHub Release）
 
 ## 架构与命令面（摘要）
 

@@ -1,6 +1,6 @@
 ---
 name: plumelog-app
-version: 0.1.0
+version: 0.1.1
 description: "PlumeLog application names and per-app extend/MDC fields. extend del is high-risk-write (needs --yes)."
 metadata:
   requires:

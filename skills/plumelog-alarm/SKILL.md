@@ -1,6 +1,6 @@
 ---
 name: plumelog-alarm
-version: 0.1.0
+version: 0.1.1
 description: "PlumeLog warning rules and monitor messages: list/save/delete/messages. delete is high-risk-write (needs --yes)."
 metadata:
   requires:

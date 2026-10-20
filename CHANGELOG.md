@@ -9,6 +9,20 @@
 
 All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
 
+## [0.1.4] - 2026-10-20
+
+### Changed
+- **trace get** shares `doWithAutoLogin` + `finishUpstream` with generic invoke (success-only enricher for empty-hit hint); `query apps` uses the same auto-login helper
+- Skill frontmatter: `plumelog-admin|alarm|api|app` → **0.1.1**
+- Docs: SECURITY/AGENTS current line **v0.1.4**; `docs/qa-checklist.md` rewritten for post-v0.1.3 reality; multi-profile explicitly **out of scope** (single instance + env/config)
+
+### Added
+- GitHub Actions **Release** workflow (`.github/workflows/release.yml`): on `v*` tag, upload linux/darwin/windows amd64/arm64 binaries + `checksums.txt`
+
+### Notes
+- Install: `go install …@v0.1.4` **or** download Release assets
+- Old JSESSIONID sessions (if leaked in local QA) must be invalidated manually in the browser / server — CLI cannot revoke server sessions
+
 ## [0.1.3] - 2026-10-19
 
 ### Breaking
@@ -41,5 +55,6 @@ All notable changes to **plumelog-cli** are documented here. The binary name is 
 
 - See GitHub Releases for prior notes.
 
+[0.1.4]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4
 [0.1.3]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3
 [0.1.2]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2

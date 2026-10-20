@@ -66,18 +66,9 @@ func (a *App) runApps(cmd *cobra.Command, f appsFlags) error {
 	if stop || err != nil {
 		return err
 	}
-	resp, err := a.do(cmd, req)
+	resp, err := a.doWithAutoLogin(cmd, req)
 	if err != nil {
 		return err
-	}
-	if a.autoLogin && !a.dryRun && isUnauthorized(resp) && !isLoginRequest(req) {
-		if err := a.silentLogin(cmd); err != nil {
-			return err
-		}
-		resp, err = a.do(cmd, req)
-		if err != nil {
-			return err
-		}
 	}
 	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
 		return a.finishUpstream(cmd, resp)

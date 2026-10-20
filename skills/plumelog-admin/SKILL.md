@@ -1,6 +1,6 @@
 ---
 name: plumelog-admin
-version: 0.1.0
+version: 0.1.1
 description: "PlumeLog admin: queue counts/clear, index info/delete/reset, run-model, delete-by-query. High-risk ops require --dry-run first, then --yes; queue clear and index delete also need --admin-password."
 metadata:
   requires:

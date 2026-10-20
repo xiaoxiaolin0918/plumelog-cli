@@ -219,7 +219,7 @@ When the server returns a whitespace-only body, the CLI fails on **stderr** with
 
 ### 9.4 `trace get` empty-hit hint (Issue #21)
 
-Zero hits stay `ok:true`; envelope may include `hint` suggesting `query search --trace-id`. Implemented via `invokeTraceGet` / `finishTraceGet`, a **known fork** of `App.invoke` / `finishUpstream` (auto-login + failure paths must stay in sync when the envelope changes). No automatic fallback to the run-log index.
+Zero hits stay `ok:true`; envelope may include `hint` suggesting `query search --trace-id`. Implemented via `invokeTraceGet` → shared `doWithAutoLogin` + `finishUpstream` with a **success-only enricher** (no separate finish/auto-login fork). No automatic fallback to the run-log index.
 
 ### 9.5 `--range` body window (Issue #22)
 
@@ -242,6 +242,7 @@ DSL builder always sets `query_string.default_operator: AND`. Explicit Lucene `O
 
 ## 11. Out of scope (v0)
 
+- **Multi-profile / `+onboard`**: v0 is **single instance** only (`config.json` + `PLUMELOG_*`). Documented deliberately; not a bug.
 - Live tail WebSocket (`ws://<host>/plumelog/websocket`) — use the web UI.
 - No full `plumelog update` / self-update binary yet (skills update only).
 
@@ -254,6 +255,7 @@ DSL builder always sets `query_string.default_operator: AND`. Explicit Lucene `O
 | [README.md](../README.md) / [README.zh-CN.md](../README.zh-CN.md) | Install, security, quick start |
 | [skills/README.md](../skills/README.md) / `skills/plumelog-shared` | Agent contracts |
 | [docs/smoke-checklist.md](smoke-checklist.md) | Release smoke (exit **10** + `confirmation_required`) |
+| [docs/qa-checklist.md](qa-checklist.md) | Current acceptance checklist (post-v0.1.3) |
 | [SECURITY.md](../SECURITY.md) / [CONTRIBUTING.md](../CONTRIBUTING.md) | Vulnerability reports / contrib |
 | [docs/wiki/](wiki/README.md) | **Only** docs source of truth (GitHub Wiki deprecated/disabled). Home, Getting-Started, Auth, Skills-for-AI, Architecture |
 

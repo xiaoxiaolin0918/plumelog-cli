@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)
 
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
 
@@ -35,28 +35,24 @@ go test ./...
 **Go install：**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.3
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
+
+也可从 [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) 下载平台二进制（校验 `checksums.txt`）。无自更新命令。
 ```
 
-发布说明：[v0.1.3](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3)。
+发布说明：[v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)。
 
 
-## 0.1.3 更新摘要
+## 0.1.4 更新摘要
 
-### 破坏性变更
+- **Release 二进制**：推送 `v*` tag 时 GitHub Actions 上传多平台二进制 + checksums（仍可用 `go install`）
+- **trace get** / **query apps** 与通用 invoke 共用 auto-login + finish（减少信封分叉）
+- 文档：`qa-checklist` 按现行重写；明确 **单实例** 配置（无 multi-profile / onboard）
+- Skills：admin/alarm/api/app → **0.1.1**
 
-- **`query apps` 的 `result` 形状**：≤0.1.2 时 `result` 多为 **裸 JSON 数组**；0.1.3 起固定为对象 `{ "apps": [...], "count": N, ... }`（可选 `app_like` / `sample` / enrich 字段）。脚本与 `--jq` 请从 `.result[0]` / 把 `.result` 当数组改为 **`.result.apps`**。
+### 自 0.1.3 起仍须注意的破坏性变更
 
-### 修复与功能（Issues #18–#23）
-
-- 多词 `-q` / `--content` 使用 Lucene `default_operator: AND`（#23）；显式 `OR` / 引号仍有效
-- `--range day|week|month` 在未给 `--from-time`/`--to-time` 时同步把 body `dtTime` 扩成 **24h / 7d / 30d**（#22）。**`month` = 30 天，不是自然月**
-- 上游空 body → stderr `ok:false`、`error.subtype=empty_body`、`result.hits.total=0`、非零退出（#19）
-- `trace get` 零命中仍 `ok:true`，并提示改用 `query search --trace-id`（#21）
-- `--from-time` / `--to-time` 支持 `now`、相对时间（`-3d` / `-2h` / `+15m`）、RFC3339、本地日期时间、epoch（#18）
-- `query apps --app-like` / `--sample` / `--enrich`（#20）
-
-详见 [CHANGELOG.md](CHANGELOG.md)。
+- **`query apps` 的 `result` 形状**：固定为对象 `{ "apps": [...], "count": N, ... }`；脚本与 `--jq` 请用 **`.result.apps`**（不要再把 `.result` 当裸数组）
 
 ## 安全（先读）
 
