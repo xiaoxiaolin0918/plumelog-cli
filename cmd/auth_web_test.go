@@ -335,11 +335,46 @@ func TestWebLoginPersistsBaseURLFromForm(t *testing.T) {
 }
 
 func TestWebLoginOKHTMLShowsBaseURL(t *testing.T) {
-	html := webLoginOKHTML("http://example.test/pl", `C:\cookies.txt`, false, nil)
-	for _, want := range []string{"登录成功", "http://example.test/pl", `C:\cookies.txt`, "base_url"} {
+	const base = "http://example.test/pl"
+	const cookie = `C:\cookies.txt`
+	html := webLoginOKHTML(base, cookie, false, nil)
+	for _, want := range []string{
+		"登录成功",
+		"服务地址",
+		"Cookie 路径",
+		base,
+		cookie,
+	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("ok HTML missing %q", want)
 		}
+	}
+	// Regression: CSS percent must not be fed to fmt.Sprintf (would yield %!s(MISSING)).
+	if strings.Contains(html, "MISSING") {
+		t.Fatalf("ok HTML has fmt MISSING artifact: %s", html)
+	}
+	if !strings.Contains(html, "<code>"+base+"</code>") {
+		t.Fatalf("base URL not inside <code>: %s", html)
+	}
+	if !strings.Contains(html, "<code>"+cookie+"</code>") {
+		t.Fatalf("cookie path not inside <code>: %s", html)
+	}
+	styleEnd := strings.Index(html, "</style>")
+	if styleEnd < 0 {
+		t.Fatal("missing </style>")
+	}
+	if strings.Contains(html[:styleEnd], base) || strings.Contains(html[:styleEnd], cookie) {
+		t.Fatal("base/cookie leaked into <style> via fmt verb theft")
+	}
+}
+
+func TestWebLoginFailHTMLNoFmtMissing(t *testing.T) {
+	html := webLoginFailHTML(errors.New("invalid login (402)"))
+	if strings.Contains(html, "MISSING") {
+		t.Fatalf("fail HTML has fmt MISSING artifact: %s", html)
+	}
+	if !strings.Contains(html, "用户名或密码错误") {
+		t.Fatalf("want zh invalid-login: %s", html)
 	}
 }
 
@@ -383,7 +418,6 @@ func newTestApp(t *testing.T, dir, baseURL string) *App {
 	a.cfg.BaseURL = a.baseURL
 	return a
 }
-
 
 func TestWebLoginRememberEncryptsPassword(t *testing.T) {
 	var gotBody atomic.Value
@@ -533,6 +567,9 @@ func TestWebLoginFormHTMLRememberChecked(t *testing.T) {
 
 func TestWebLoginOKHTMLRememberErr(t *testing.T) {
 	html := webLoginOKHTML("http://x", "c.txt", false, errors.New("disk full"))
+	if strings.Contains(html, "MISSING") {
+		t.Fatalf("remember-err HTML has MISSING: %s", html)
+	}
 	if !strings.Contains(html, "登录成功") {
 		t.Fatalf("still success: %s", html)
 	}
