@@ -1,0 +1,15 @@
+{
+  "name": "plumelog",
+  "bin": "plumelog.exe",
+  "version": "0.1.4",
+  "envelope": "ok-json",
+  "status": "registered",
+  "skills": "skills",
+  "docs": "docs",
+  "ui": null,
+  "doctor": ["doctor"],
+  "update": null,
+  "risk_default": "read",
+  "supports_dry_run": true,
+  "supports_yes": true
+}
