@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
-	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
@@ -222,7 +222,6 @@ func (a *App) persistLoginFromWeb(cmd *cobra.Command, user, pass string) error {
 	return nil
 }
 
-
 // webLoginPrefill returns username and whether "remember" should be checked.
 func (a *App) webLoginPrefill() (username string, remember bool) {
 	username = strings.TrimSpace(a.cfg.LoginUsername)
@@ -355,18 +354,21 @@ func webLoginOKHTML(baseURL, cookiePath string, remembered bool, rememberErr err
 	} else if remembered {
 		extra = `<li>已启用记住并自动登录（密码已本机加密保存）</li>`
 	}
-	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title>
-<style>`+webLoginSharedCSS()+`</style></head><body>
-<main class="card">
-<span class="status ok">成功</span>
-<h1>登录成功</h1>
-<p class="note">会话 Cookie 已写入本机。你可以关闭此标签页，回到终端继续使用 CLI。</p>
-<ul class="meta">
-<li>已登录到 base_url：<code>%s</code></li>
-<li>cookie_path：<code>%s</code></li>
-%s
-</ul>
-</main></body></html>`, html.EscapeString(baseURL), html.EscapeString(cookiePath), extra)
+	// Concatenate (do not fmt.Sprintf the full page): shared CSS contains "%"
+	// (e.g. width:100%) which would be treated as format verbs and steal args,
+	// producing "%!s(MISSING)" on the success page.
+	return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title>
+	<style>` + webLoginSharedCSS() + `</style></head><body>
+	<main class="card">
+	<span class="status ok">成功</span>
+	<h1>登录成功</h1>
+	<p class="note">会话 Cookie 已写入本机。你可以关闭此标签页，回到终端继续使用 CLI。</p>
+	<ul class="meta">
+	<li>服务地址（base_url）：<code>` + html.EscapeString(baseURL) + `</code></li>
+	<li>Cookie 路径（cookie_path）：<code>` + html.EscapeString(cookiePath) + `</code></li>
+	` + extra + `
+	</ul>
+	</main></body></html>`
 }
 
 func webLoginFailHTML(err error) string {
@@ -374,14 +376,15 @@ func webLoginFailHTML(err error) string {
 	if err != nil {
 		msg = webLoginErrZh(err)
 	}
-	return fmt.Sprintf(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录失败</title>
-<style>`+webLoginSharedCSS()+`</style></head><body>
-<main class="card">
-<span class="status fail">失败</span>
-<h1>登录失败</h1>
-<p class="err">%s</p>
-<p class="foot">请关闭此标签页，在终端用 <code>plumelog auth login --web</code> 重试（如需覆盖已有会话请加 <code>--force</code>）。</p>
-</main></body></html>`, msg)
+	// Same rule as webLoginOKHTML: keep CSS out of fmt.Sprintf.
+	return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录失败</title>
+	<style>` + webLoginSharedCSS() + `</style></head><body>
+	<main class="card">
+	<span class="status fail">失败</span>
+	<h1>登录失败</h1>
+	<p class="err">` + msg + `</p>
+	<p class="foot">请关闭此标签页，在终端用 <code>plumelog auth login --web</code> 重试（如需覆盖已有会话请加 <code>--force</code>）。</p>
+	</main></body></html>`
 }
 
 // webLoginErrZh maps common login errors to readable Chinese; unknown errors are HTML-escaped as-is.
