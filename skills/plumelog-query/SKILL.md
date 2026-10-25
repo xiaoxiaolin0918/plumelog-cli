@@ -15,6 +15,7 @@ metadata:
 链路检索见 [`../plumelog-trace/SKILL.md`](../plumelog-trace/SKILL.md)。
 
 ## 命令
+- `plumelog update --check|--yes` — self-update from GitHub Releases
 
 | 命令 | 说明 | Risk |
 |------|------|------|

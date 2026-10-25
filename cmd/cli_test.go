@@ -48,6 +48,7 @@ func TestCommandTreeRisk(t *testing.T) {
 		"admin run-model":       "read",
 		"admin delete-by-query": "high-risk-write",
 		"api":                   "varies",
+		"update":                "high-risk-write",
 		"version":               "read",
 		"skills list":           "read",
 		"skills read":           "read",

@@ -7,10 +7,11 @@
   "skills": "skills",
   "docs": "docs",
   "ui": null,
-  "doctor": ["doctor"],
+  "doctor": [
+    "doctor"
+  ],
   "update": [
-    "https://github.com/xiaoxiaolin0918/plumelog-cli/releases/latest",
-    "https://github.com/xiaoxiaolin0918/plumelog-cli/releases/latest/download/checksums.txt"
+    "update"
   ],
   "risk_default": "read",
   "supports_dry_run": true,

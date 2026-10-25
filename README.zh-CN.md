@@ -37,7 +37,7 @@ go test ./...
 ```bash
 go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
 
-也可从 [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) 下载平台二进制（校验 `checksums.txt`）。无自更新命令。
+也可从 [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) 下载平台二进制（校验 `checksums.txt`）。无自更新命令。 自更新：`plumelog update --check` / `plumelog update --yes`。
 ```
 
 发布说明：[v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)。
@@ -96,6 +96,7 @@ plumelog
   admin run-model | delete-by-query
   api <METHOD> <path>                     # 原始 HTTP
   skills list | path | read | install | update
+  update [--check|--yes]
   version
   whoami
 ```

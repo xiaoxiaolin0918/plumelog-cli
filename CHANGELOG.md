@@ -3,9 +3,14 @@
 
 ## Unreleased
 
+### Added
+
+- **`plumelog update`**: `--check` compares current vs GitHub Releases latest; `--yes` downloads the platform asset, verifies `checksums.txt` SHA-256, and replaces this binary. Manifest `update` argv is `["update"]` for cli-manager.
+
 ### Docs
 
 - **GitHub Wiki deprecated/disabled**; sole docs source is in-repo `docs/wiki/`.
+
 
 All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
 
