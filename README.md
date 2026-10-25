@@ -39,7 +39,7 @@ go test ./...
 ```bash
 go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
 
-Or download a platform binary from the [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) page (linux/darwin/windows; see `checksums.txt`). There is no self-update command.
+Or download a platform binary from the [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) page (linux/darwin/windows; see `checksums.txt`). Self-update: `plumelog update --check` / `plumelog update --yes`.
 ```
 
 Release notes: [v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4).
@@ -93,6 +93,7 @@ plumelog
   admin run-model | delete-by-query
   api <METHOD> <path>
   skills list | path | read | install | update
+  update [--check|--yes]
   version
   whoami
 ```

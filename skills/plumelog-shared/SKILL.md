@@ -164,7 +164,7 @@ plumelog skills update --dry-run
 - 默认安装根：`~/.agents/skills`（Unix）/ `%USERPROFILE%\.agents\skills`（Windows）
 - `skills update`：把已装副本强制刷新为**当前二进制配套**版本（等价于针对当前源的 `install --force`），避免与 CLI 漂移（Issue #5）
 - `skills list --check`：对比 bundled vs installed 的 SKILL.md frontmatter `version`（installed / outdated / missing / unknown）
-- 仍无整包 `plumelog update` / self-update（P2）；构建：`go build -o plumelog.exe .`
+- 二进制自更新：`plumelog update --check`（只查）/ `plumelog update --yes`（下载 Release 资产、校验 checksums 后替换本二进制）
 
 ## Windows / MSYS
 

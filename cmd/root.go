@@ -148,6 +148,7 @@ Discovery:
 		a.newAdminCmd(),
 		a.newAPICmd(),
 		a.newSkillsCmd(),
+		a.newUpdateCmd(),
 		a.newVersionCmd(),
 	)
 	silence(root)
@@ -187,13 +188,14 @@ func mark(cmd *cobra.Command, level, short string) {
 }
 
 func (a *App) resolve(cmd *cobra.Command, _ []string) error {
-	if cmd.Name() == "version" || isSkillsCommand(cmd) {
+	if cmd.Name() == "version" || cmd.Name() == "update" || isSkillsCommand(cmd) {
 		a.format = "json"
 		if a.flagFormat != "" {
 			a.format = a.flagFormat
 		}
 		a.jq = a.flagJQ
 		a.dryRun = a.flagDryRun
+		a.yes = a.flagYes
 		return nil
 	}
 	if err := a.resolveInto(cmd); err != nil {
