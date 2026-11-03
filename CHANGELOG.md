@@ -6,11 +6,6 @@
 ### Added
 
 - Named multi-profile (Issue #37): `--profile` / `PLUMELOG_PROFILE`, `config profile list|use|set`; `default` keeps legacy flat layout; no `+onboard`
-
-## Unreleased
-
-### Added
-
 - **`plumelog update`**: `--check` compares current vs GitHub Releases latest; `--yes` downloads the platform asset, verifies `checksums.txt` SHA-256, and replaces this binary. Manifest `update` argv is `["update"]` for cli-manager.
 
 ### Docs
