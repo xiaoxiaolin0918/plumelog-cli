@@ -13,7 +13,7 @@ func (a *App) newWhoamiCmd() *cobra.Command {
 		Long: `Thin alias of auth status (same output path and fields).
 
 Always prints (never secrets):
-  base_url, authenticated, has_cookie, cookie_path, path_prefix
+  base_url, profile, authenticated, has_cookie, cookie_path, path_prefix
 
 Cookie values and passwords are never printed. With --probe, POSTs /getRunModel
 to refine authenticated from the server response.`,

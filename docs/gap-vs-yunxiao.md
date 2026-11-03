@@ -17,7 +17,7 @@
 | config get/set/path/show | ✅ | ✅ |
 | `--dry-run` / `--jq` / `--yes` | ✅ | ✅ |
 | confirmation_required + exit 10 | ✅ | ✅ exit **10** + `error.subtype=confirmation_required` |
-| profile / +onboard | ✅ | ❌ 单实例 + env/config（**明确不做** onboard） |
+| profile / +onboard | ✅ | ⚠️ named `--profile` + `config profile`（**不做** +onboard） |
 | skills list/install + 随包 | ✅ | ✅ `plumelog skills list|read|path|install` |
 | update / self-update | ✅ | ❌（`go build`） |
 | smoke-checklist.md | ✅ | ✅（本轮新增短页） |
@@ -53,7 +53,7 @@
 ## P2
 
 - [x] **根级 `whoami`**：别名封装 `auth status`（base_url / authenticated / has_cookie / cookie_path / path_prefix）
-- [x] **multi-profile**：文档声明「单实例 + env/config，不做 +onboard」（README / architecture / 本文）——**不实现**
+- [x] **multi-profile**：已实现 named profile（`--profile` / `PLUMELOG_PROFILE` / `config profile list|use|set`）；**仍不做** yunxiao 式 `+onboard`
 - [ ] **`plumelog update` / self-update**：仍无；**已有** tag 触发的多平台 Release 资产（`.github/workflows/release.yml`）+ `go install`
 - [ ] **alias 子系统**（禁止嵌入 `--yes`）— 低优
 - [ ] **Agent 非 TTY 环境变量**（`PLUMELOG_NO_TUI` 等）— 默认已是 JSON，影响小

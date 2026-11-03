@@ -41,7 +41,7 @@
 
 ## 2. 配置模型（文档门禁）
 
-- **单实例**：当前仅 `config.json` + `PLUMELOG_*` 环境变量；**无** multi-profile / `+onboard`（见 `docs/gap-vs-yunxiao.md`、`docs/architecture.md`）。
+- **Named profile（#37）**：`--profile` / `PLUMELOG_PROFILE` / `config profile list|use|set`；`default` 仍用扁平 `config.json`+`cookies.txt`，其它名走 `profiles/<name>/` 独立 jar/cred。仍**无** `+onboard`（见 `docs/gap-vs-yunxiao.md`、`docs/architecture.md`）。
 - Cookie jar：默认 OS config 目录下 `cookies.txt`；可用 `--cookie-jar` 覆盖。
 
 ## 3. 安装与 Release 资产

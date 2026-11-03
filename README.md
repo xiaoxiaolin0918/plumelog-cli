@@ -48,7 +48,7 @@ Release notes: [v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases
 
 - **Release binaries**: tagging `v*` runs GitHub Actions to publish multi-platform binaries + checksums (still fine to use `go install`)
 - **trace get** / **query apps** share one auto-login + finish path (fewer envelope forks)
-- Docs: qa-checklist rewritten; **single-instance** config only (no multi-profile / onboard)
+- Docs: qa-checklist rewritten; **named profiles** supported (`--profile` / `config profile`); still no `+onboard`
 - Skills admin/alarm/api/app bumped to **0.1.1**
 
 ### Breaking note carried from 0.1.3
@@ -83,7 +83,7 @@ export PLUMELOG_ADMIN_PASSWORD='YOUR_ADMIN_PASSWORD'
 plumelog
   auth login | logout | status
   doctor
-  config get | set | path | show
+  config get | set | path | show | profile
   query search | dsl | apps
   trace get
   app list | extend list | extend add | extend del
@@ -194,14 +194,16 @@ Success is a JSON envelope on **stdout**: `{"ok":true,"result":...}`. Failures w
 
 ## Config and cookies
 
-**Single instance only:** one `config.json` + `PLUMELOG_*` environment variables. There is **no** named multi-profile / `+onboard` flow (unlike yunxiao-cli). See [`docs/gap-vs-yunxiao.md`](docs/gap-vs-yunxiao.md).
+**Named profiles** (Issue #37): isolate `base_url` / cookies / encrypted `login.cred` per environment. The `default` profile keeps the legacy flat layout (`config.json` + `cookies.txt`). There is still **no** yunxiao-style `+onboard`. See [`docs/gap-vs-yunxiao.md`](docs/gap-vs-yunxiao.md).
 
 
 | | Unix | Windows |
 |--|------|---------|
 | Directory | `$XDG_CONFIG_HOME/plumelog` or `~/.config/plumelog` | `%APPDATA%\plumelog` |
-| Config | `config.json` (mode `0600`) | same file name |
-| Cookies | `cookies.txt` (Netscape cookie file, mode `0600`) | same file name |
+| Config (default) | `config.json` (mode `0600`) | same file name |
+| Cookies (default) | `cookies.txt` (Netscape cookie file, mode `0600`) | same file name |
+| Named profile | `profiles/<name>/config.json` + `cookies.txt` (+ optional `login.cred`) | same |
+| Current pointer | `profiles.json` (`current`) | same |
 
 ```bash
 ./plumelog config path
@@ -210,6 +212,13 @@ Success is a JSON envelope on **stdout**: `{"ok":true,"result":...}`. Failures w
 ./plumelog config set path_prefix /plumelog
 ./plumelog config set path_prefix root
 ./plumelog config set default_time_window 15m
+
+# DEV vs prod without mixing cookies
+./plumelog config profile set dev base_url http://192.168.100.115:8891
+./plumelog config profile set prod base_url http://plumelog.example.com
+./plumelog config profile use dev
+./plumelog --profile prod auth status
+./plumelog --profile dev query search --app demo --level ERROR -q timeout
 ```
 
 Passwords are refused by `config set`. Use flags or:

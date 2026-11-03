@@ -1,7 +1,7 @@
 ---
 name: plumelog-shared
-version: 0.1.3
-description: "Use for plumelog CLI setup/auth: auth login/status/logout, whoami, config, doctor, JSON ok/result envelope (success stdout; failure stderr with object error), --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 10 + confirmation_required), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
+version: 0.1.4
+description: "Use for plumelog CLI setup/auth: auth login/status/logout, whoami, config, named --profile / config profile, doctor, JSON ok/result envelope (success stdout; failure stderr with object error), --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 10 + confirmation_required), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:
     bins: ["plumelog"]
@@ -69,6 +69,28 @@ plumelog config set path_prefix root    # 或 /plumelog；auto 为默认
 ```
 
 `config set` **拒绝**写入密码类字段。密码只用 flag 或环境变量。
+
+### Named profile（多环境，Issue #37）
+
+DEV / 生产并行时用 named profile，避免 Cookie / config 串环境。仍**不做** yunxiao 式 `+onboard`。
+
+```bash
+plumelog config profile list
+plumelog config profile set dev base_url http://192.168.100.115:8891
+plumelog config profile set prod base_url http://plumelog.iipcloud.cn
+plumelog config profile use dev
+plumelog --profile prod auth login --username "$PLUMELOG_LOGIN_USERNAME" --password "$PLUMELOG_LOGIN_PASSWORD"
+plumelog --profile prod query search --app demo --level ERROR -q timeout
+```
+
+| 项 | 约定 |
+|----|------|
+| 选择顺序 | `--profile` > `PLUMELOG_PROFILE` > `profiles.json` 的 `current` > `default` |
+| `default` | 兼容 0.1.4 扁平布局：`config.json` + `cookies.txt`（+ 可选加密 `login.cred`） |
+| 其它名字 | `profiles/<name>/config.json`、`cookies.txt`、可选 `login.cred` |
+| 密码 | 禁止写入任何 profile 的 `config.json` |
+
+`doctor` / `whoami` / `config path|show` 会带 `profile` 字段，便于核对当前环境。
 
 ### `--path-prefix`
 

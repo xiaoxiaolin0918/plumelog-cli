@@ -47,12 +47,28 @@ go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
 
 - **Release 二进制**：推送 `v*` tag 时 GitHub Actions 上传多平台二进制 + checksums（仍可用 `go install`）
 - **trace get** / **query apps** 与通用 invoke 共用 auto-login + finish（减少信封分叉）
-- 文档：`qa-checklist` 按现行重写；明确 **单实例** 配置（无 multi-profile / onboard）
+- 文档：`qa-checklist` 按现行重写；支持 **named profile**（`--profile` / `config profile`）；仍不做 `+onboard`
 - Skills：admin/alarm/api/app → **0.1.1**
 
 ### 自 0.1.3 起仍须注意的破坏性变更
 
 - **`query apps` 的 `result` 形状**：固定为对象 `{ "apps": [...], "count": N, ... }`；脚本与 `--jq` 请用 **`.result.apps`**（不要再把 `.result` 当裸数组）
+
+## Named profile（多环境）
+
+同一台机器可并行 DEV / 生产，互不覆盖 Cookie：
+
+```bash
+plumelog config profile set dev base_url http://192.168.100.115:8891
+plumelog config profile set prod base_url http://plumelog.example.com
+plumelog config profile use dev
+plumelog --profile prod auth login --username "$PLUMELOG_LOGIN_USERNAME" --password "$PLUMELOG_LOGIN_PASSWORD"
+plumelog --profile prod query search --app demo --level ERROR -q timeout
+```
+
+- 默认 profile 名 `default`，布局与 0.1.4 单实例兼容（`config.json` + `cookies.txt`）
+- 命名 profile 目录：`profiles/<name>/`（独立 config / cookies / 可选加密 `login.cred`）
+- 仍**不做** yunxiao 式 `+onboard`；密码仍禁止写入 `config.json`
 
 ## 安全（先读）
 
@@ -86,7 +102,7 @@ Windows PowerShell 可以把环境变量写成 `$env:PLUMELOG_LOGIN_PASSWORD = '
 plumelog
   auth login | logout | status          # 登录 / 登出 / 是否已有 Cookie
   doctor                                  # 连通性、会话、getRunModel、队列
-  config get | set | path | show          # 配置；show 会脱敏
+  config get | set | path | show | profile          # 配置；show 会脱敏
   query search | dsl | apps               # 快捷查询、原始 DSL、应用名
   trace get                               # trace=true 下按 traceId 查链路
   app list | extend list | add | del      # 应用名与扩展字段

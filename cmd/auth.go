@@ -200,6 +200,7 @@ func (a *App) runAuthStatus(cmd *cobra.Command, probe bool) error {
 	hasCookie := a.jar != nil && a.jar.HasAny()
 	result := map[string]any{
 		"base_url":      a.baseURL,
+		"profile":       a.profile,
 		"authenticated": hasCookie,
 		"has_cookie":    hasCookie,
 		"cookie_path":   a.cookiePath,

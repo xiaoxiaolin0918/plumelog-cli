@@ -240,15 +240,21 @@ DSL builder always sets `query_string.default_operator: AND`. Explicit Lucene `O
 
 ---
 
-## 11. Out of scope (v0)
+## 11. Named profiles (Issue #37)
 
-- **Multi-profile / `+onboard`**: v0 is **single instance** only (`config.json` + `PLUMELOG_*`). Documented deliberately; not a bug.
+- `--profile` / `PLUMELOG_PROFILE` / `config profile list|use|set`.
+- `default` keeps flat `config.json`+`cookies.txt` (0.1.4 compatible); other names use `profiles/<name>/` with independent cookie jar and optional `login.cred`.
+- Still **no** yunxiao-style `+onboard`; plaintext passwords never written to `config.json`.
+
+## 12. Out of scope (v0)
+
 - Live tail WebSocket (`ws://<host>/plumelog/websocket`) — use the web UI.
 - No full `plumelog update` / self-update binary yet (skills update only).
 
+
 ---
 
-## 12. Related docs
+## 13. Related docs
 
 | Doc | Purpose |
 |-----|---------|
