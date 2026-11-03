@@ -33,6 +33,7 @@ type App struct {
 	flagPathPrefix    string
 	flagCookieJar     string
 	flagConfig        string
+	flagProfile       string
 	flagTimeout       time.Duration
 
 	baseURL       string
@@ -44,6 +45,7 @@ type App struct {
 	adminPassword string
 	prefixMode    string
 	timeout       time.Duration
+	profile       string
 	configPath    string
 	cookiePath    string
 	cfg           config.File
@@ -82,6 +84,7 @@ JSESSIONID cookie). There is no bearer token. Cookies are stored in a
 Netscape cookies.txt file and are never printed.
 
 Config: ~/.config/plumelog/config.json (Windows: %APPDATA%\plumelog\config.json).
+Named profiles: --profile / PLUMELOG_PROFILE / config profile use (default profile keeps the legacy flat layout).
 Precedence: flags > environment > config.json > defaults.
 
 Quick start:
@@ -134,6 +137,7 @@ Discovery:
 	p.StringVar(&a.flagPathPrefix, "path-prefix", "auto", `path prefix: auto, "" (or root), or /plumelog`)
 	p.StringVar(&a.flagCookieJar, "cookie-jar", "", "override the Netscape cookie jar path")
 	p.StringVar(&a.flagConfig, "config", "", "override the config.json path")
+	p.StringVar(&a.flagProfile, "profile", "", "named profile (env PLUMELOG_PROFILE; default from profiles.json or default)")
 	p.DurationVar(&a.flagTimeout, "timeout", 0, "HTTP timeout (default 30s)")
 
 	root.AddCommand(
@@ -206,7 +210,21 @@ func (a *App) resolve(cmd *cobra.Command, _ []string) error {
 }
 
 func (a *App) resolveInto(cmd *cobra.Command) error {
-	defCfg, defCookie, err := config.DefaultPaths()
+	configDir, err := config.Dir()
+	if err != nil {
+		return err
+	}
+	flagProfile := ""
+	if changed(cmd, "profile") {
+		flagProfile = a.flagProfile
+	}
+	profile, err := config.ResolveProfileName(flagProfile, os.Getenv("PLUMELOG_PROFILE"), configDir)
+	if err != nil {
+		return err
+	}
+	a.profile = profile
+
+	defCfg, defCookie, err := config.PathsForProfile(configDir, profile)
 	if err != nil {
 		return err
 	}

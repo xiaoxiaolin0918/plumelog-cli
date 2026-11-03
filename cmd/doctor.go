@@ -57,6 +57,7 @@ Prints config path, cookie path, and the resolved path prefix. Cookie values are
 
 			result := map[string]any{
 				"base_url":     a.baseURL,
+				"profile":      a.profile,
 				"config_path":  a.configPath,
 				"cookie_path":  a.cookiePath,
 				"path_prefix":  a.prefixMode,

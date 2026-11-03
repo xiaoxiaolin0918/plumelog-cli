@@ -28,6 +28,9 @@ func TestCommandTreeRisk(t *testing.T) {
 		"config set":            "write",
 		"config path":           "read",
 		"config show":           "read",
+		"config profile list":   "read",
+		"config profile use":    "write",
+		"config profile set":    "write",
 		"query search":          "read",
 		"query dsl":             "read",
 		"query apps":            "read",
@@ -327,7 +330,7 @@ func TestWhoamiFields(t *testing.T) {
 		t.Fatalf("%s", out)
 	}
 	result := env["result"].(map[string]any)
-	for _, k := range []string{"base_url", "authenticated", "has_cookie", "cookie_path", "path_prefix"} {
+	for _, k := range []string{"base_url", "profile", "authenticated", "has_cookie", "cookie_path", "path_prefix"} {
 		if _, ok := result[k]; !ok {
 			t.Fatalf("missing %s in %s", k, out)
 		}

@@ -19,7 +19,7 @@ func (a *App) newConfigCmd() *cobra.Command {
 		Short: "Read and write config.json (passwords are refused)",
 		RunE:  helpOnly,
 	}
-	cmd.AddCommand(a.newConfigGet(), a.newConfigSet(), a.newConfigPath(), a.newConfigShow())
+	cmd.AddCommand(a.newConfigGet(), a.newConfigSet(), a.newConfigPath(), a.newConfigShow(), a.newConfigProfileCmd())
 	return cmd
 }
 
@@ -28,6 +28,7 @@ func (a *App) newConfigPath() *cobra.Command {
 		Use: "path",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return a.ok(cmd, map[string]any{
+				"profile":     a.profile,
 				"config_path": a.configPath,
 				"cookie_path": a.cookiePath,
 				"config_dir":  dirOf(a.configPath),
@@ -44,6 +45,7 @@ func (a *App) newConfigShow() *cobra.Command {
 		Long: "Print the stored config and the effective values. Passwords and cookie values are never included.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return a.ok(cmd, map[string]any{
+				"profile":     a.profile,
 				"config_path": a.configPath,
 				"cookie_path": a.cookiePath,
 				"stored":      storedView(a.cfg),
@@ -62,6 +64,7 @@ func (a *App) newConfigShow() *cobra.Command {
 					"PLUMELOG_BASE_URL":       presence(os.Getenv("PLUMELOG_BASE_URL")),
 					"PLUMELOG_PATH_PREFIX":    presence(os.Getenv("PLUMELOG_PATH_PREFIX")),
 					"PLUMELOG_LOGIN_USERNAME": presence(os.Getenv("PLUMELOG_LOGIN_USERNAME")),
+					"PLUMELOG_PROFILE":        presence(os.Getenv("PLUMELOG_PROFILE")),
 				},
 			})
 		},
@@ -114,6 +117,137 @@ func (a *App) newConfigSet() *cobra.Command {
 		},
 	}
 	mark(cmd, risk.Write, "Set one non-secret config field")
+	return cmd
+}
+
+
+func (a *App) newConfigProfileCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "profile",
+		Short: "Manage named config profiles",
+		Long: `Named profiles isolate base_url, cookies, and encrypted login.cred per environment.
+
+The default profile keeps the legacy flat layout (config.json + cookies.txt).
+Other profiles live under profiles/<name>/ in the plumelog config directory.
+Passwords are never stored in config.json. There is no +onboard wizard.`,
+		RunE: helpOnly,
+	}
+	cmd.AddCommand(a.newConfigProfileList(), a.newConfigProfileUse(), a.newConfigProfileSet())
+	return cmd
+}
+
+func (a *App) newConfigProfileList() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "list",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			configDir, err := config.Dir()
+			if err != nil {
+				return a.fail(cmd, risk.Read, err)
+			}
+			current, err := config.CurrentProfile(configDir)
+			if err != nil {
+				return a.fail(cmd, risk.Read, err)
+			}
+			names, err := config.ListProfiles(configDir)
+			if err != nil {
+				return a.fail(cmd, risk.Read, err)
+			}
+			items := make([]map[string]any, 0, len(names))
+			for _, name := range names {
+				cfgPath, cookiePath, err := config.PathsForProfile(configDir, name)
+				if err != nil {
+					return a.fail(cmd, risk.Read, err)
+				}
+				items = append(items, map[string]any{
+					"name":        name,
+					"current":     name == current,
+					"config_path": cfgPath,
+					"cookie_path": cookiePath,
+				})
+			}
+			return a.ok(cmd, map[string]any{
+				"current":  current,
+				"profiles": items,
+			})
+		},
+	}
+	mark(cmd, risk.Read, "List named profiles")
+	return cmd
+}
+
+func (a *App) newConfigProfileUse() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "use <name>",
+		Args: cobra.ExactArgs(1),
+		Long: "Set the current profile in profiles.json (creates the profile directory if needed).",
+		Example: `  plumelog config profile use dev
+  plumelog config profile use default`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			configDir, err := config.Dir()
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			name := args[0]
+			if err := config.SetCurrent(configDir, name); err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			cfgPath, cookiePath, err := config.PathsForProfile(configDir, name)
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			return a.ok(cmd, map[string]any{
+				"profile":     name,
+				"config_path": cfgPath,
+				"cookie_path": cookiePath,
+			})
+		},
+	}
+	mark(cmd, risk.Write, "Switch the current named profile")
+	return cmd
+}
+
+func (a *App) newConfigProfileSet() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "set <name> <key> <value>",
+		Args: cobra.ExactArgs(3),
+		Long: "Write one non-secret field into a named profile's config.json (mode 0600).\nPasswords are refused. Creates the profile directory if needed.",
+		Example: `  plumelog config profile set dev base_url http://192.168.100.115:8891
+  plumelog config profile set prod base_url http://plumelog.example.com
+  plumelog config profile set prod path_prefix /plumelog`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, key, val := args[0], args[1], args[2]
+			if config.SecretKey(key) {
+				return a.fail(cmd, risk.Write, fmt.Errorf("refusing to store %s in config.json; use a flag or environment variable", key))
+			}
+			configDir, err := config.Dir()
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			if err := config.EnsureProfile(configDir, name); err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			cfgPath, _, err := config.PathsForProfile(configDir, name)
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			file, _, err := config.Load(cfgPath)
+			if err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			if err := applySet(&file, key, val); err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			if err := config.Save(cfgPath, file); err != nil {
+				return a.fail(cmd, risk.Write, err)
+			}
+			return a.ok(cmd, map[string]any{
+				"profile":     name,
+				"key":         key,
+				"config_path": cfgPath,
+			})
+		},
+	}
+	mark(cmd, risk.Write, "Set one non-secret field on a named profile")
 	return cmd
 }
 
