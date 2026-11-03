@@ -1,6 +1,6 @@
 ---
 name: plumelog-shared
-version: 0.1.4
+version: 0.1.5
 description: "Use for plumelog CLI setup/auth: auth login/status/logout, whoami, config, named --profile / config profile, doctor, JSON ok/result envelope (success stdout; failure stderr with object error), --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 10 + confirmation_required), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:

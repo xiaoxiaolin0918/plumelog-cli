@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)
 
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
 
@@ -35,20 +35,19 @@ go test ./...
 **Go install：**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.5
 
 也可从 [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) 下载平台二进制（校验 `checksums.txt`）。无自更新命令。 自更新：`plumelog update --check` / `plumelog update --yes`。
 ```
 
-发布说明：[v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)。
+发布说明：[v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)。
 
 
-## 0.1.4 更新摘要
+## 0.1.5 更新摘要
 
-- **Release 二进制**：推送 `v*` tag 时 GitHub Actions 上传多平台二进制 + checksums（仍可用 `go install`）
-- **trace get** / **query apps** 与通用 invoke 共用 auto-login + finish（减少信封分叉）
-- 文档：`qa-checklist` 按现行重写；支持 **named profile**（`--profile` / `config profile`）；仍不做 `+onboard`
-- Skills：admin/alarm/api/app → **0.1.1**
+- **Named multi-profile**（Issue #37）：`--profile` / `PLUMELOG_PROFILE` / `config profile list|use|set`；`default` 仍兼容 0.1.4 扁平布局；命名 profile 使用 `profiles/<name>/`（独立 Cookie）。仍不做 `+onboard`
+- **`plumelog update`**：`--check` / `--yes` 对照 GitHub Releases（校验 checksum）
+- 文档：GitHub Wiki 废止；唯一文档源为仓内 `docs/wiki/`；SECURITY/AGENTS 当前发布线 **v0.1.5**
 
 ### 自 0.1.3 起仍须注意的破坏性变更
 
