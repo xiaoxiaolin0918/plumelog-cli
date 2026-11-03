@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes target the latest release on `main` (currently **v0.1.4** and newer patches).
+Security fixes target the latest release on `main` (currently **v0.1.5** and newer patches).
 
 ## Reporting a vulnerability
 

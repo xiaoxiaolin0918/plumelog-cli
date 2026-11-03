@@ -1,6 +1,6 @@
 # plumelog-cli 验收清单（现行）
 
-> 更新：2026-10-20（Asia/Shanghai）· CLI **v0.1.4**  
+> 更新：2026-11-03（Asia/Shanghai）· CLI **v0.1.5**  
 > **禁止**在记录中粘贴密码、Cookie、adminPassWord、生产主机+凭据组合。
 
 本文件是**现行**验收入口。早期「源码未齐 / scaffold」长表已过时，不再作为发版门禁。
@@ -21,7 +21,7 @@
 |----|----|------|----------|
 | B1 | 单测 | `go test ./...` | 全绿 |
 | B2 | 构建 | `go build -o plumelog.exe .`（或 CI） | 退出码 0 |
-| B3 | 版本对齐 | `plumelog version` 与 `internal/version` / tag / SECURITY / AGENTS 一致 | 同号（如 0.1.4） |
+| B3 | 版本对齐 | `plumelog version` 与 `internal/version` / tag / SECURITY / AGENTS 一致 | 同号（如 0.1.5） |
 | S1 | smoke | 按 `docs/smoke-checklist.md` 1–8 | 期望列全部满足 |
 | R1 | 高风险门禁 | `admin queue clear` 无 `--yes` | exit **10**，`confirmation_required`，不发网 |
 | R2 | dry-run | 任意写命令加 `--dry-run` | `dry_run: true`，transport 0 |

@@ -3,17 +3,19 @@
 
 ## Unreleased
 
+All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
+
+## [0.1.5] - 2026-11-03
+
 ### Added
 
-- Named multi-profile (Issue #37): `--profile` / `PLUMELOG_PROFILE`, `config profile list|use|set`; `default` keeps legacy flat layout; no `+onboard`
+- Named multi-profile (Issue #37 / PR #38): `--profile` / `PLUMELOG_PROFILE`, `config profile list|use|set`; `default` keeps legacy flat layout (0.1.4-compatible); no `+onboard`
 - **`plumelog update`**: `--check` compares current vs GitHub Releases latest; `--yes` downloads the platform asset, verifies `checksums.txt` SHA-256, and replaces this binary. Manifest `update` argv is `["update"]` for cli-manager.
 
 ### Docs
 
 - **GitHub Wiki deprecated/disabled**; sole docs source is in-repo `docs/wiki/`.
-
-
-All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
+- SECURITY/AGENTS/qa-checklist current line **v0.1.5**; architecture §11 Named profiles in scope
 
 ## [0.1.4] - 2026-10-20
 
@@ -61,6 +63,7 @@ All notable changes to **plumelog-cli** are documented here. The binary name is 
 
 - See GitHub Releases for prior notes.
 
+[0.1.5]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5
 [0.1.4]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4
 [0.1.3]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3
 [0.1.2]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2

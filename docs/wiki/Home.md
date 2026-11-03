@@ -3,7 +3,7 @@
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
 - **Repo:** https://github.com/xiaoxiaolin0918/plumelog-cli (PUBLIC, MIT)
-- **Release:** [v0.1.2](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.2)
+- **Release:** [v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)
 - **Binary:** `plumelog`
 - **Auth:** Session Cookie (same as the web UI) — **not** OAuth / Bearer
 - **Docs location:** these pages are **in-repo** under [`docs/wiki/`](README.md). **GitHub Wiki is deprecated/disabled**; do not use `.wiki.git`.

@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
@@ -37,19 +37,18 @@ go test ./...
 **Go install (module path = repo):**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.4
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.5
 
 Or download a platform binary from the [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) page (linux/darwin/windows; see `checksums.txt`). Self-update: `plumelog update --check` / `plumelog update --yes`.
 ```
 
-Release notes: [v0.1.4](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4).
+Release notes: [v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5).
 
-## What's new in 0.1.4
+## What's new in 0.1.5
 
-- **Release binaries**: tagging `v*` runs GitHub Actions to publish multi-platform binaries + checksums (still fine to use `go install`)
-- **trace get** / **query apps** share one auto-login + finish path (fewer envelope forks)
-- Docs: qa-checklist rewritten; **named profiles** supported (`--profile` / `config profile`); still no `+onboard`
-- Skills admin/alarm/api/app bumped to **0.1.1**
+- **Named multi-profile** (Issue #37): `--profile` / `PLUMELOG_PROFILE` / `config profile list|use|set`; `default` keeps the flat 0.1.4 layout; named profiles use `profiles/<name>/` (independent cookie jar). Still no `+onboard`
+- **`plumelog update`**: `--check` / `--yes` against GitHub Releases (checksum verified)
+- Docs: GitHub Wiki deprecated; in-repo `docs/wiki/` is the sole source; SECURITY/AGENTS current line **v0.1.5**
 
 ### Breaking note carried from 0.1.3
 
