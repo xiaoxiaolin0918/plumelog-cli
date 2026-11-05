@@ -11,6 +11,7 @@ import (
 
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/client"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/config"
+	"github.com/xiaoxiaolin0918/plumelog-cli/internal/credstore"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/output"
 	"github.com/xiaoxiaolin0918/plumelog-cli/internal/risk"
 )
@@ -136,10 +137,19 @@ func promptPassword(cmd *cobra.Command) (string, error) {
 }
 
 func (a *App) newLogoutCmd() *cobra.Command {
+	var forget, clearPassword bool
 	cmd := &cobra.Command{
-		Use:  "logout",
-		Long: "POST /logout and clear the local cookie jar even if the server is unreachable.",
+		Use: "logout",
+		Long: `POST /logout and clear the local cookie jar even if the server is unreachable.
+Encrypted login.cred is kept by default so --auto-login can mint a new session later.
+Pass --forget (alias --clear-password) to also remove login.cred (+ login.key when present).
+Default logout never double-clears; only --forget does. Global --dry-run previews without clearing.`,
+		Example: `  plumelog auth logout
+  plumelog auth logout --forget
+  plumelog auth logout --clear-password
+  plumelog auth logout --dry-run`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			doForget := forget || clearPassword
 			req := client.Request{Method: "POST", Path: "/logout"}
 			stop, err := a.prepare(cmd, risk.Mutation(), &req)
 			if stop || err != nil {
@@ -155,11 +165,25 @@ func (a *App) newLogoutCmd() *cobra.Command {
 			if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
 				serverOK = false
 			}
+			clearedLogin := false
+			loginCredPath := ""
+			if doForget {
+				dir := credstore.DirFromConfigPath(a.configPath)
+				loginCredPath = credstore.Path(dir)
+				if err := credstore.Clear(dir); err != nil {
+					return a.fail(cmd, risk.Write, err)
+				}
+				clearedLogin = true
+				a.autoLogin = false
+			}
 			result := map[string]any{
-				"base_url":          a.baseURL,
-				"cookie_path":       a.cookiePath,
-				"local_jar_cleared": cleared,
-				"server_logout":     serverOK,
+				"base_url":            a.baseURL,
+				"cookie_path":         a.cookiePath,
+				"local_jar_cleared":   cleared,
+				"server_logout":       serverOK,
+				"forgot_password":     doForget,
+				"cleared_login_cred":  clearedLogin,
+				"login_cred_path":     loginCredPath,
 			}
 			if serverOK && cleared {
 				return a.ok(cmd, result)
@@ -175,7 +199,9 @@ func (a *App) newLogoutCmd() *cobra.Command {
 			return &PrintedError{Msg: output.ErrorMessage(env.Error)}
 		},
 	}
-	mark(cmd, risk.Write, "Log out and clear the local cookie jar")
+	cmd.Flags().BoolVar(&forget, "forget", false, "also delete encrypted login.cred (+login.key); default logout keeps remembered password")
+	cmd.Flags().BoolVar(&clearPassword, "clear-password", false, "alias of --forget")
+	mark(cmd, risk.Write, "Log out and clear the local cookie jar; --forget also clears remembered passwords")
 	return cmd
 }
 

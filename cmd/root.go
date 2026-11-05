@@ -678,6 +678,25 @@ func (a *App) resolveSilentLoginCreds() (user, pass string, err error) {
 	return user, pass, nil
 }
 
+// rememberedStatus reports opt-in auto-login readiness without decrypting passwords.
+// can_auto_login is true only when auto-login is enabled AND (encrypted login.cred exists
+// OR a full PLUMELOG_LOGIN_USERNAME+PASSWORD env pair is set).
+func (a *App) rememberedStatus() map[string]any {
+	dir := credstore.DirFromConfigPath(a.configPath)
+	u, autoPref, ok := credstore.PeekUsernameAutoLogin(dir)
+	envUser := strings.TrimSpace(os.Getenv("PLUMELOG_LOGIN_USERNAME"))
+	envPass := os.Getenv("PLUMELOG_LOGIN_PASSWORD")
+	envPair := envUser != "" && envPass != ""
+	return map[string]any{
+		"password_stored": ok,
+		"auto_login_pref": autoPref,
+		"username":        u,
+		"auto_login":      a.autoLogin,
+		"can_auto_login":  a.autoLogin && (ok || envPair),
+		"login_cred_path": credstore.Path(dir),
+	}
+}
+
 // disableRememberedAutoLogin clears encrypted login.cred and turns off in-process auto-login
 // after a failed silent login (e.g. 402), so bad passwords are not retried forever.
 func (a *App) disableRememberedAutoLogin() {

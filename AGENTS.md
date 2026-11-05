@@ -52,7 +52,7 @@ go build -o plumelog.exe .
 
 命令组：`auth` / `query` / `trace` / `app` / `alarm` / `admin` / `api` / `skills` / `doctor` / `config` / `version` / `whoami`。
 
-- 鉴权：Servlet Session Cookie（常见 `JSESSIONID`），非 Bearer。`auth login --web` 仅监听 `127.0.0.1`；可选记住密码 → 加密 `login.cred`（从不进 `config.json` 明文）
+- 鉴权：Servlet Session Cookie（常见 `JSESSIONID`），非 Bearer。`auth login --web` 仅监听 `127.0.0.1`；可选记住密码 → 加密 `login.cred`（从不进 `config.json` 明文）；`doctor` 含 `can_auto_login`；`auth logout --forget` 双清 session+login.cred
 - 高风险写：须 `--yes`；部分还需 `--admin-password` / `PLUMELOG_ADMIN_PASSWORD`
 - 细节以 `docs/architecture.md` 与 `docs/wiki/` 为准
 
