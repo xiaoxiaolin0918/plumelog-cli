@@ -38,6 +38,7 @@ plumelog auth status --probe    # 只读 POST /getRunModel 探会话
 plumelog whoami                 # 根级别名，字段与 auth status 相同
 plumelog whoami --probe
 plumelog auth logout
+plumelog auth logout --forget   # also clears encrypted login.cred (alias --clear-password)
 ```
 
 ### 生产 URL 与凭据来源
@@ -153,6 +154,8 @@ Agent 流程：识别 `ok==false` 且 `error.subtype==confirmation_required`（�
 
 ## doctor 排障序
 
+`doctor` result includes `can_auto_login` (bool), `password_stored`, and non-secret `username` — **does not decrypt passwords**. `can_auto_login=true` means auto-login is on and either a full env credential pair or `login.cred` is present.
+
 ```bash
 plumelog doctor
 plumelog auth status --probe
@@ -211,7 +214,10 @@ plumelog query search --app demo -q timeout --auto-login
 
 约束：
 
-- 密码只从 `PLUMELOG_LOGIN_PASSWORD`（用户名还可来自 config `login_username`）读取；
-- **只重试一次**；再 401 原样报错；
-- 走共享 HTTP client + cookie jar；dry-run / `auth login` 自身不触发；
-- 密码永不落入日志、dry-run、错误信封（与现有脱敏规则一致）。
+- Remember: Web form 「记住并自动登录」 -> encrypted `login.cred` (same semantic as other CLIs `--remember` / `--store-password`); **off by default**.
+- Auto-login: `--auto-login` / `PLUMELOG_AUTO_LOGIN=1`, or `login.cred` `auto_login: true`.
+- Credential sources are atomic: full env `PLUMELOG_LOGIN_USERNAME`+`PASSWORD`, else whole `login.cred`.
+- **Retry once only**; further 401 fails as-is; failure exit 1 (never exit 10).
+- `auth logout` clears cookie only by default; `--forget` (`--clear-password`) double-clears session + `login.cred`.
+- Shared HTTP client + cookie jar; dry-run / `auth login` itself do not trigger auto-login.
+- Passwords never appear in logs, dry-run, or error envelopes.

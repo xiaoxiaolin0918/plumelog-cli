@@ -42,3 +42,10 @@ plumelog skills update --skill plumelog-query
 - `docs/gap-vs-yunxiao.md` — 相对 yunxiao 的完善清单（P0/P1/P2）
 - `docs/smoke-checklist.md` — 发版后短 smoke
 - `docs/architecture.md` — 契约
+
+## Auth baseline (remember / auto-login / forget)
+
+- Remember: Web「记住并自动登录」→ encrypted `login.cred` (no plaintext in config).
+- Auto-login: `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` (or cred `auto_login`).
+- Logout: default clears cookie only; `--forget` / `--clear-password` also clears `login.cred`.
+- `doctor` exposes `can_auto_login` without decrypting passwords. Never put real secrets in examples.

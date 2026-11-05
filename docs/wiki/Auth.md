@@ -12,6 +12,7 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 ./plumelog auth status --probe
 ./plumelog whoami
 ./plumelog auth logout
+./plumelog auth logout --forget   # also clears encrypted login.cred
 ```
 
 ### `--web` / `--browser`
@@ -39,3 +40,20 @@ Credential pairs are **atomic** (username and password from the same source):
 3. Else env/config username + env password only (no mixing with `login.cred`)
 
 A silent-login **402** clears `login.cred` and disables remembered auto-login for the process so a bad password is not retried forever.
+
+
+### Logout
+
+- Default: `POST /logout` + clear local cookie jar only. Encrypted `login.cred` is **kept** so a later `--auto-login` can mint a new session.
+- `--forget` (alias `--clear-password`): also deletes `login.cred` (+ `login.key` when present). Double-clear is opt-in only.
+- Global `--dry-run` previews the logout request and does not clear jar or credentials.
+
+### Remember / auto-login (opt-in)
+
+| Flag / control | Meaning |
+|----------------|---------|
+| Web form **记住并自动登录** | Encrypted remember into `login.cred` (Windows DPAPI; other OS AES-GCM + `login.key`). Never plaintext in `config.json`. Equivalent semantic to other CLIs' `--remember` / `--store-password`. |
+| `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` | On upstream 401, silent re-login **once** and replay. Also enabled when `login.cred` has `auto_login: true`. |
+| `auth logout --forget` | Clears session **and** remembered password. |
+
+`plumelog doctor` exposes `can_auto_login` (bool), plus `password_stored` and a non-secret `username` from `login.cred` metadata — **without decrypting the password**. `true` means auto-login is enabled and either `login.cred` exists or a full `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` env pair is set.

@@ -127,11 +127,12 @@ plumelog
 ./plumelog auth status --probe
 ./plumelog whoami
 ./plumelog auth logout
+./plumelog auth logout --forget   # 同时清除加密 login.cred
 ```
 
 `POST /login`，body 为 `{"username","password"}`。`402` 表示凭据无效。服务端未配置 `login.username` 时，空的 `auth login` 仍会 POST 并记录 `auth: open`。
 
-`auth login --web` 中文表单含 **服务地址**（可由 `--base-url` / 环境变量 / 配置预填）与可选 **记住并自动登录**（密码加密存为配置旁的 `login.cred`，不会明文写入 `config.json`）。详见 [鉴权 Auth](docs/wiki/Auth.md)。
+`auth login --web` 中文表单含 **服务地址**（可由 `--base-url` / 环境变量 / 配置预填）与可选 **记住并自动登录**（密码加密存为配置旁的 `login.cred`，不会明文写入 `config.json`）。详见 [鉴权 Auth](docs/wiki/Auth.md)。可选自动重登：`--auto-login` / `PLUMELOG_AUTO_LOGIN=1`（或 Web「记住并自动登录」）。`auth logout` 默认保留 `login.cred`；`--forget`（别名 `--clear-password`）才双清。`doctor` 输出 `can_auto_login`（不解密密码）。
 
 `auth status` 只输出 `has_cookie`、`cookie_path`、`base_url`，**从不**打印 Cookie 值。
 

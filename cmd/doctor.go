@@ -15,7 +15,7 @@ func (a *App) newDoctorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "doctor",
 		Long: `Check base URL reachability, cookie presence (names only), POST /getRunModel, and POST /getQueueCounts.
-Prints config path, cookie path, and the resolved path prefix. Cookie values are never printed.`,
+Prints config path, cookie path, path prefix, and can_auto_login (remembered/env readiness without decrypting). Cookie values and passwords are never printed.`,
 		Example: `  plumelog doctor
   plumelog doctor --base-url http://127.0.0.1:8891`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -55,16 +55,22 @@ Prints config path, cookie path, and the resolved path prefix. Cookie values are
 				checks = append(checks, check{Name: "queue", OK: qok, Detail: qdetail})
 			}
 
+			rem := a.rememberedStatus()
 			result := map[string]any{
-				"base_url":     a.baseURL,
-				"profile":      a.profile,
-				"config_path":  a.configPath,
-				"cookie_path":  a.cookiePath,
-				"path_prefix":  a.prefixMode,
-				"prefix_order": a.client.Prefixes,
-				"has_cookie":   a.jar != nil && a.jar.HasAny(),
-				"cookie_names": names,
-				"checks":       checks,
+				"base_url":        a.baseURL,
+				"profile":         a.profile,
+				"config_path":     a.configPath,
+				"cookie_path":     a.cookiePath,
+				"path_prefix":     a.prefixMode,
+				"prefix_order":    a.client.Prefixes,
+				"has_cookie":      a.jar != nil && a.jar.HasAny(),
+				"cookie_names":    names,
+				"remembered":      rem,
+				"auto_login":      a.autoLogin,
+				"can_auto_login":  rem["can_auto_login"],
+				"password_stored": rem["password_stored"],
+				"username":        rem["username"],
+				"checks":          checks,
 			}
 			env := output.Envelope{OK: healthy, Result: output.MustResult(result)}
 			if !healthy {
