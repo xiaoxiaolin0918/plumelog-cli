@@ -113,7 +113,7 @@ Every command `--help` is marked **Risk: read**, **write**, or **high-risk-write
 
 `POST /login` with `{"username","password"}`. `402` means invalid credentials. When the server has no `login.username`, an empty `auth login` still posts and records `auth: open`.
 
-`auth login --web` shows a Chinese form with **服务地址** (base URL, prefilled from `--base-url` / env / config) and optional **记住并自动登录**, which stores an encrypted password beside config as `login.cred` (never plaintext in `config.json`). Details: [Auth wiki](docs/wiki/Auth.md). Opt-in auto re-login: `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` (or web remember). `auth logout` keeps `login.cred` by default; `--forget` (alias `--clear-password`) double-clears. `doctor` reports `can_auto_login` without decrypting passwords.
+`auth login --web` shows a Chinese form with **服务地址** (base URL, prefilled from `--base-url` / env / config) and optional **记住并自动登录**, which stores an encrypted password beside config as `login.cred` (never plaintext in `config.json`). Details: [Auth wiki](docs/wiki/Auth.md). With a remembered `login.cred` or a `PLUMELOG_LOGIN_*` env pair, 401 silent re-login is on by default; disable with `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0`. `auth logout` keeps `login.cred` by default; `--forget` (alias `--clear-password`) double-clears. `doctor` reports `can_auto_login` without decrypting passwords.
 
 `auth status` prints only `has_cookie`, `cookie_path`, and `base_url` — never the cookie value.
 

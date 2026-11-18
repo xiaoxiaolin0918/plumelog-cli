@@ -70,11 +70,11 @@ func TestDoctorCanAutoLoginFields(t *testing.T) {
 		t.Fatalf("password leaked: %s", out)
 	}
 
-	// env pair alone (no store) + explicit --auto-login
+	// env pair alone (no store) enables auto-login by default
 	dir2 := t.TempDir()
 	t.Setenv("PLUMELOG_LOGIN_USERNAME", "env-user")
 	t.Setenv("PLUMELOG_LOGIN_PASSWORD", "env-pass-secret")
-	out, err = runIn(t, dir2, "doctor", "--base-url", srv.URL, "--auto-login")
+	out, err = runIn(t, dir2, "doctor", "--base-url", srv.URL)
 	if err != nil {
 		t.Fatal(err, out)
 	}
@@ -83,7 +83,7 @@ func TestDoctorCanAutoLoginFields(t *testing.T) {
 	}
 	res, _ = env["result"].(map[string]any)
 	if v, ok := res["can_auto_login"].(bool); !ok || !v {
-		t.Fatalf("can_auto_login want true with env pair + --auto-login: %v out=%s", res["can_auto_login"], out)
+		t.Fatalf("can_auto_login want true with env pair by default: %v out=%s", res["can_auto_login"], out)
 	}
 	if strings.Contains(out, "env-pass-secret") {
 		t.Fatalf("env password leaked: %s", out)

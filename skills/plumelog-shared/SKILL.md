@@ -201,21 +201,21 @@ plumelog skills update --dry-run
 - 差距与 backlog：`docs/gap-vs-yunxiao.md`
 - 发版手跑：`docs/smoke-checklist.md`
 
-## 401 自动重登（Issue #2，opt-in）
+## 401 自动重登（Issue #2 / #41）
 
-Session Cookie 可能数小时失效。遇上上游 `code:401` / HTTP 401 时，可选择自动重登**一次**并重放原请求：
+Session Cookie 可能数小时失效。只要存在有效 `login.cred`（web「记住并自动登录」）或完整 `PLUMELOG_LOGIN_USERNAME`+`PASSWORD` 环境变量，遇上上游 `code:401` / HTTP 401 时会**默认**自动重登一次并重放原请求：
 
 ```bash
 export PLUMELOG_LOGIN_USERNAME="..."
 export PLUMELOG_LOGIN_PASSWORD="..."   # 勿打印 / 勿写入报告
-export PLUMELOG_AUTO_LOGIN=1             # 或命令加 --auto-login
-plumelog query search --app demo -q timeout --auto-login
+plumelog query search --app demo -q timeout
+# 关闭自动重登：--no-auto-login 或 PLUMELOG_AUTO_LOGIN=0
 ```
 
 约束：
 
-- Remember: Web form 「记住并自动登录」 -> encrypted `login.cred` (same semantic as other CLIs `--remember` / `--store-password`); **off by default**.
-- Auto-login: `--auto-login` / `PLUMELOG_AUTO_LOGIN=1`, or `login.cred` `auto_login: true`.
+- Remember: Web form 「记住并自动登录」 -> encrypted `login.cred` (same semantic as other CLIs `--remember` / `--store-password`); storing the password is still **opt-in**.
+- Auto-login is **on by default** when `login.cred` `auto_login: true` or a full env credential pair is present. Disable with `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0`. `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` still force-enable it.
 - Credential sources are atomic: full env `PLUMELOG_LOGIN_USERNAME`+`PASSWORD`, else whole `login.cred`.
 - **Retry once only**; further 401 fails as-is; failure exit 1 (never exit 10).
 - `auth logout` clears cookie only by default; `--forget` (`--clear-password`) double-clears session + `login.cred`.

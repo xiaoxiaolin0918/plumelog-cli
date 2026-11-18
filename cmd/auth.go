@@ -31,7 +31,7 @@ func (a *App) newLoginCmd() *cobra.Command {
 	var web, browser, force bool
 	cmd := &cobra.Command{
 		Use:  "login",
-		Long: "POST /login (and /plumelog/login when --path-prefix auto falls back).\nBody is {\"username\",\"password\"}. A successful call stores Set-Cookie in the jar.\nPassword is read from --password, PLUMELOG_LOGIN_PASSWORD, or a terminal prompt.\nAn empty username still POSTs /login so an open server (no loginUsername) can mint a session.\n\n--web (alias --browser) starts a one-shot listener on 127.0.0.1 (never 0.0.0.0),\nopens the system browser to a tokenized URL, and collects username/password via a\nminimal Chinese HTML form (inline CSS only). Timeout is 120s. Passwords are never printed. Optional「记住并自动登录」stores an encrypted password for --auto-login (never plaintext in config.json).\nIf the cookie jar already has a session, pass --force to replace it.",
+		Long: "POST /login (and /plumelog/login when --path-prefix auto falls back).\nBody is {\"username\",\"password\"}. A successful call stores Set-Cookie in the jar.\nPassword is read from --password, PLUMELOG_LOGIN_PASSWORD, or a terminal prompt.\nAn empty username still POSTs /login so an open server (no loginUsername) can mint a session.\n\n--web (alias --browser) starts a one-shot listener on 127.0.0.1 (never 0.0.0.0),\nopens the system browser to a tokenized URL, and collects username/password via a\nminimal Chinese HTML form (inline CSS only). Timeout is 120s. Passwords are never printed. Optional「记住并自动登录」stores an encrypted password and enables default silent re-login on 401 (never plaintext in config.json). Disable with --no-auto-login or PLUMELOG_AUTO_LOGIN=0.\nIf the cookie jar already has a session, pass --force to replace it.",
 		Example: `  plumelog auth login --username admin --password "$PLUMELOG_LOGIN_PASSWORD"
   plumelog auth login
   plumelog auth login --web
@@ -141,7 +141,7 @@ func (a *App) newLogoutCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "logout",
 		Long: `POST /logout and clear the local cookie jar even if the server is unreachable.
-Encrypted login.cred is kept by default so --auto-login can mint a new session later.
+Encrypted login.cred is kept by default so a later 401 can silently mint a new session.
 Pass --forget (alias --clear-password) to also remove login.cred (+ login.key when present).
 Default logout never double-clears; only --forget does. Global --dry-run previews without clearing.`,
 		Example: `  plumelog auth logout
@@ -177,13 +177,13 @@ Default logout never double-clears; only --forget does. Global --dry-run preview
 				a.autoLogin = false
 			}
 			result := map[string]any{
-				"base_url":            a.baseURL,
-				"cookie_path":         a.cookiePath,
-				"local_jar_cleared":   cleared,
-				"server_logout":       serverOK,
-				"forgot_password":     doForget,
-				"cleared_login_cred":  clearedLogin,
-				"login_cred_path":     loginCredPath,
+				"base_url":           a.baseURL,
+				"cookie_path":        a.cookiePath,
+				"local_jar_cleared":  cleared,
+				"server_logout":      serverOK,
+				"forgot_password":    doForget,
+				"cleared_login_cred": clearedLogin,
+				"login_cred_path":    loginCredPath,
 			}
 			if serverOK && cleared {
 				return a.ok(cmd, result)
