@@ -315,9 +315,15 @@ func storedValue(f config.File, key string) (any, bool, error) {
 	case "login_username":
 		return f.LoginUsername, f.LoginUsername != "", nil
 	case "check_update":
-		return f.CheckUpdate, f.CheckUpdate, nil
+		if f.CheckUpdate == nil {
+			return true, false, nil
+		}
+		return *f.CheckUpdate, true, nil
 	case "auto_update":
-		return f.AutoUpdate, f.AutoUpdate, nil
+		if f.AutoUpdate == nil {
+			return true, false, nil
+		}
+		return *f.AutoUpdate, true, nil
 	default:
 		return nil, false, fmt.Errorf("unknown key %q (want %s)", key, strings.Join(config.Keys(), ", "))
 	}
@@ -380,13 +386,13 @@ func applySet(f *config.File, key, val string) error {
 		if err != nil {
 			return fmt.Errorf("check_update %w", err)
 		}
-		f.CheckUpdate = v
+		f.CheckUpdate = &v
 	case "auto_update":
 		v, err := parseConfigBool(val)
 		if err != nil {
 			return fmt.Errorf("auto_update %w", err)
 		}
-		f.AutoUpdate = v
+		f.AutoUpdate = &v
 	default:
 		return fmt.Errorf("unknown key %q (want %s)", key, strings.Join(config.Keys(), ", "))
 	}

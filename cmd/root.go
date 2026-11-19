@@ -37,7 +37,9 @@ type App struct {
 	flagProfile       string
 	flagTimeout       time.Duration
 	flagCheckUpdate   bool
+	flagNoCheckUpdate bool
 	flagAutoUpdate    bool
+	flagNoAutoUpdate  bool
 
 	baseURL             string
 	format              string
@@ -146,8 +148,10 @@ Discovery:
 	p.StringVar(&a.flagConfig, "config", "", "override the config.json path")
 	p.StringVar(&a.flagProfile, "profile", "", "named profile (env PLUMELOG_PROFILE; default from profiles.json or default)")
 	p.DurationVar(&a.flagTimeout, "timeout", 0, "HTTP timeout (default 30s)")
-	p.BoolVar(&a.flagCheckUpdate, "check-update", false, "opportunistic background update check (env PLUMELOG_CHECK_UPDATE=1; config check_update); stderr hint only")
-	p.BoolVar(&a.flagAutoUpdate, "auto-update", false, "when check-update finds a newer release, silently download/replace (env PLUMELOG_AUTO_UPDATE=1; config auto_update); default off")
+	p.BoolVar(&a.flagCheckUpdate, "check-update", false, "enable background update check (default on; stderr hint only)")
+	p.BoolVar(&a.flagNoCheckUpdate, "no-check-update", false, "disable background update check and silent auto-replace (env PLUMELOG_CHECK_UPDATE=0; config set check_update false)")
+	p.BoolVar(&a.flagAutoUpdate, "auto-update", false, "silently download/replace when a newer release is found (default on)")
+	p.BoolVar(&a.flagNoAutoUpdate, "no-auto-update", false, "disable silent auto-replace; check/hint may still run (env PLUMELOG_AUTO_UPDATE=0; config set auto_update false)")
 
 	root.AddCommand(
 		a.newAuthCmd(),

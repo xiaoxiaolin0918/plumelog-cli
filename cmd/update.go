@@ -77,20 +77,22 @@ plumelog_<os>_<arch>[.exe] + checksums.txt).
   plumelog update --check   # compare current vs latest; do not download
   plumelog update --yes     # download matching asset, verify SHA-256, replace this binary
 
-Background check and silent replace are off by default. Enable with:
+Background check and silent replace are on by default. Disable with:
 
-  --check-update / PLUMELOG_CHECK_UPDATE=1 / config check_update=true
-  --auto-update  / PLUMELOG_AUTO_UPDATE=1  / config auto_update=true
+  --no-check-update / PLUMELOG_CHECK_UPDATE=0 / config check_update=false
+  --no-auto-update  / PLUMELOG_AUTO_UPDATE=0  / config auto_update=false
 
 Check runs after a successful command (24h cache, short timeout) and prints a
 stderr hint only. Auto-update implies check-update and replaces the binary
 when a newer release is found; failure is rolled back and reported on stderr.
+--no-check-update also disables silent auto-replace. --no-auto-update keeps
+the check/hint. --dry-run never replaces.
 
 mgr invokes: <bin> update [--check|--yes].`,
 		Example: `  plumelog update --check
   plumelog update --yes
   plumelog update --yes --dry-run
-  plumelog config set auto_update true`,
+  plumelog config set auto_update false`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a.format = firstNonEmpty(a.format, "json")
 			if checkOnly || !a.yes {
