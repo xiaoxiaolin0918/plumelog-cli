@@ -21,8 +21,8 @@ type File struct {
 	Format            string  `json:"format,omitempty"`
 	CookieJar         string  `json:"cookie_jar,omitempty"`
 	LoginUsername     string  `json:"login_username,omitempty"`
-	CheckUpdate       bool    `json:"check_update,omitempty"`
-	AutoUpdate        bool    `json:"auto_update,omitempty"`
+	CheckUpdate       *bool   `json:"check_update,omitempty"`
+	AutoUpdate        *bool   `json:"auto_update,omitempty"`
 }
 
 // Dir is the plumelog config directory.

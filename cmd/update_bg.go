@@ -27,27 +27,32 @@ type updateCheckCache struct {
 	Notified  string    `json:"notified_version,omitempty"`
 }
 
+func resolveToggle(noFlag, yesFlag bool, envName string, cfg *bool, defaultOn bool) (enabled bool, explicitOff bool) {
+	if noFlag {
+		return false, true
+	}
+	if yesFlag {
+		return true, false
+	}
+	if v, explicit := envBool(envName); explicit {
+		return v, !v
+	}
+	if cfg != nil {
+		return *cfg, !*cfg
+	}
+	return defaultOn, false
+}
+
 func (a *App) resolveUpdateFlags() {
-	if a.flagCheckUpdate {
-		a.checkUpdateEnabled = true
-	}
-	if a.flagAutoUpdate {
-		a.autoUpdateEnabled = true
-	}
-	if v, explicit := envBool("PLUMELOG_CHECK_UPDATE"); explicit && v {
-		a.checkUpdateEnabled = true
-	}
-	if v, explicit := envBool("PLUMELOG_AUTO_UPDATE"); explicit && v {
-		a.autoUpdateEnabled = true
-	}
-	if a.cfg.CheckUpdate {
-		a.checkUpdateEnabled = true
-	}
-	if a.cfg.AutoUpdate {
-		a.autoUpdateEnabled = true
-	}
-	if a.autoUpdateEnabled {
-		a.checkUpdateEnabled = true
+	check, checkOff := resolveToggle(a.flagNoCheckUpdate, a.flagCheckUpdate, "PLUMELOG_CHECK_UPDATE", a.cfg.CheckUpdate, true)
+	auto, _ := resolveToggle(a.flagNoAutoUpdate, a.flagAutoUpdate, "PLUMELOG_AUTO_UPDATE", a.cfg.AutoUpdate, true)
+	if checkOff {
+		// Explicit check-off disables the whole hook, including auto-replace.
+		a.checkUpdateEnabled = false
+		a.autoUpdateEnabled = false
+	} else {
+		a.autoUpdateEnabled = auto
+		a.checkUpdateEnabled = check || auto
 	}
 	a.updateFlagsResolved = true
 }
@@ -57,7 +62,7 @@ func (a *App) ensureUpdateFlags() {
 		return
 	}
 	// Best-effort config load for commands that skip resolveInto (e.g. version).
-	if !a.cfg.CheckUpdate && !a.cfg.AutoUpdate {
+	if a.cfg.CheckUpdate == nil && a.cfg.AutoUpdate == nil {
 		if dir, err := config.Dir(); err == nil {
 			name, err := config.ResolveProfileName(a.flagProfile, os.Getenv("PLUMELOG_PROFILE"), dir)
 			if err == nil {

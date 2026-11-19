@@ -4,6 +4,12 @@ All notable changes to **plumelog-cli** are documented here. The binary name is 
 
 ## Unreleased
 
+## [0.1.7] - 2026-11-19
+
+### Changed
+
+- Silent / background update is **on by default**. Disable replace with `--no-auto-update` / `PLUMELOG_AUTO_UPDATE=0` / `config set auto_update false` (check/hint remains). Disable the hook with `--no-check-update` / `PLUMELOG_CHECK_UPDATE=0` / `config set check_update false`. Precedence: `--no-*` > `--*` > explicit env > config > default on. `--dry-run` never replaces.
+
 ## [0.1.6] - 2026-11-19
 
 ### Added
@@ -73,6 +79,7 @@ All notable changes to **plumelog-cli** are documented here. The binary name is 
 
 - See GitHub Releases for prior notes.
 
+[0.1.7]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.7
 [0.1.6]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6
 [0.1.5]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5
 [0.1.4]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4

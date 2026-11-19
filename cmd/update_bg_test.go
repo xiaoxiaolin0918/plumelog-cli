@@ -60,47 +60,69 @@ func TestUpdateCheckCacheRoundTrip(t *testing.T) {
 	}
 }
 
+func boolPtr(v bool) *bool { return &v }
+
 func TestResolveUpdateFlagsDefaultsAndEnv(t *testing.T) {
 	t.Setenv("PLUMELOG_CHECK_UPDATE", "")
 	t.Setenv("PLUMELOG_AUTO_UPDATE", "")
 	a := &App{}
 	a.resolveUpdateFlags()
-	if a.checkUpdateEnabled || a.autoUpdateEnabled {
-		t.Fatal("default off")
+	if !a.checkUpdateEnabled || !a.autoUpdateEnabled {
+		t.Fatal("default on")
 	}
 
-	t.Setenv("PLUMELOG_CHECK_UPDATE", "1")
+	t.Setenv("PLUMELOG_AUTO_UPDATE", "0")
 	a = &App{}
 	a.resolveUpdateFlags()
 	if !a.checkUpdateEnabled || a.autoUpdateEnabled {
-		t.Fatal("check only")
+		t.Fatal("env auto=0 keeps check, disables auto")
 	}
 
-	t.Setenv("PLUMELOG_AUTO_UPDATE", "true")
+	t.Setenv("PLUMELOG_CHECK_UPDATE", "0")
+	t.Setenv("PLUMELOG_AUTO_UPDATE", "")
 	a = &App{}
 	a.resolveUpdateFlags()
-	if !a.checkUpdateEnabled || !a.autoUpdateEnabled {
-		t.Fatal("auto implies check")
+	if a.checkUpdateEnabled || a.autoUpdateEnabled {
+		t.Fatal("env check=0 disables hook including auto")
 	}
 
 	t.Setenv("PLUMELOG_CHECK_UPDATE", "")
 	t.Setenv("PLUMELOG_AUTO_UPDATE", "")
-	a = &App{cfg: config.File{CheckUpdate: true}}
+	a = &App{cfg: config.File{AutoUpdate: boolPtr(false)}}
 	a.resolveUpdateFlags()
 	if !a.checkUpdateEnabled || a.autoUpdateEnabled {
-		t.Fatal("config check_update")
+		t.Fatal("config auto_update false keeps check")
 	}
 
-	a = &App{cfg: config.File{AutoUpdate: true}}
+	a = &App{cfg: config.File{CheckUpdate: boolPtr(false)}}
+	a.resolveUpdateFlags()
+	if a.checkUpdateEnabled || a.autoUpdateEnabled {
+		t.Fatal("config check_update false disables hook including auto")
+	}
+
+	a = &App{flagNoAutoUpdate: true}
+	a.resolveUpdateFlags()
+	if !a.checkUpdateEnabled || a.autoUpdateEnabled {
+		t.Fatal("--no-auto-update keeps check")
+	}
+
+	a = &App{flagNoCheckUpdate: true, flagAutoUpdate: true}
+	a.resolveUpdateFlags()
+	if a.checkUpdateEnabled || a.autoUpdateEnabled {
+		t.Fatal("--no-check-update wins over --auto-update")
+	}
+
+	a = &App{flagNoAutoUpdate: true, flagAutoUpdate: true}
+	a.resolveUpdateFlags()
+	if !a.checkUpdateEnabled || a.autoUpdateEnabled {
+		t.Fatal("--no-auto-update wins over --auto-update")
+	}
+
+	t.Setenv("PLUMELOG_AUTO_UPDATE", "0")
+	a = &App{flagAutoUpdate: true}
 	a.resolveUpdateFlags()
 	if !a.checkUpdateEnabled || !a.autoUpdateEnabled {
-		t.Fatal("config auto_update implies check")
-	}
-
-	a = &App{flagCheckUpdate: true}
-	a.resolveUpdateFlags()
-	if !a.checkUpdateEnabled || a.autoUpdateEnabled {
-		t.Fatal("flag check-update")
+		t.Fatal("--auto-update overrides env 0")
 	}
 }
 
@@ -148,7 +170,7 @@ func TestBackgroundCheckHintAndSilentAutoUpdate(t *testing.T) {
 	t.Setenv("APPDATA", home)
 	t.Setenv("XDG_CONFIG_HOME", home)
 	t.Setenv("PLUMELOG_CHECK_UPDATE", "1")
-	t.Setenv("PLUMELOG_AUTO_UPDATE", "")
+	t.Setenv("PLUMELOG_AUTO_UPDATE", "0")
 
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "plumelog")

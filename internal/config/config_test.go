@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -56,5 +57,26 @@ func TestSaveModeAndRejectsBadPrefix(t *testing.T) {
 	}
 	if !SecretKey("admin_password") || SecretKey("base_url") {
 		t.Fatal("secret key classification")
+	}
+}
+
+func TestUpdateBoolPointersRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	off := false
+	if err := Save(path, File{AutoUpdate: &off, CheckUpdate: &off}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(raw)
+	if !strings.Contains(s, `"auto_update": false`) || !strings.Contains(s, `"check_update": false`) {
+		t.Fatalf("explicit false must be stored, got %s", raw)
+	}
+	loaded, ok, err := Load(path)
+	if err != nil || !ok || loaded.AutoUpdate == nil || *loaded.AutoUpdate || loaded.CheckUpdate == nil || *loaded.CheckUpdate {
+		t.Fatalf("%+v ok=%v err=%v", loaded, ok, err)
 	}
 }

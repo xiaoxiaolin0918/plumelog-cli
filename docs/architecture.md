@@ -249,7 +249,7 @@ DSL builder always sets `query_string.default_operator: AND`. Explicit Lucene `O
 ## 12. Out of scope (v0)
 
 - Live tail WebSocket (`ws://<host>/plumelog/websocket`) — use the web UI.
-- `plumelog update --check` / `--yes` self-updates from GitHub Releases (checksum verified). Optional background check / silent replace is **off by default**: `--check-update` / `PLUMELOG_CHECK_UPDATE` / `config check_update`; `--auto-update` / `PLUMELOG_AUTO_UPDATE` / `config auto_update` (implies check). Hints go to stderr only.
+- `plumelog update --check` / `--yes` self-updates from GitHub Releases (checksum verified). Background check / silent replace is **on by default**. Disable with `--no-auto-update` / `PLUMELOG_AUTO_UPDATE=0` / `config set auto_update false` (hints stay), or `--no-check-update` / `PLUMELOG_CHECK_UPDATE=0` / `config set check_update false` (disables the hook). Hints go to stderr only. `--dry-run` never replaces.
 
 
 ---

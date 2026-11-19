@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.7)
 
 Command-line client for a [PlumeLog](https://github.com/fayechenlong/plumelog) server (default port **8891**).
 
@@ -37,17 +37,21 @@ go test ./...
 **Go install (module path = repo):**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.6
-
-Or download a platform binary from the [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) page (linux/darwin/windows; see `checksums.txt`). Self-update: `plumelog update --check` / `plumelog update --yes`. Optional background check / silent replace (default off): `--check-update` / `PLUMELOG_CHECK_UPDATE`, `--auto-update` / `PLUMELOG_AUTO_UPDATE`, or `config set check_update|auto_update true`.
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.7
 ```
 
-Release notes: [v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6).
+Or download a platform binary from the [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) page (linux/darwin/windows; see `checksums.txt`). Self-update: `plumelog update --check` / `plumelog update --yes`. Background check / silent replace is on by default; disable with `--no-auto-update` / `PLUMELOG_AUTO_UPDATE=0` / `config set auto_update false`, or `--no-check-update` / `PLUMELOG_CHECK_UPDATE=0` / `config set check_update false`.
+
+Release notes: [v0.1.7](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.7).
+
+## What's new in 0.1.7
+
+- **Silent / background update is on by default.** Disable replace with `--no-auto-update` / `PLUMELOG_AUTO_UPDATE=0` / `config set auto_update false` (check/hint remains). Disable the hook with `--no-check-update` / `PLUMELOG_CHECK_UPDATE=0` / `config set check_update false`. `--dry-run` never replaces.
 
 ## What's new in 0.1.6
 
 - **Issue #41**: silent re-login on 401 is on by default when `login.cred` (`auto_login: true`) or a full `PLUMELOG_LOGIN_*` env pair is present; disable with `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0`. `doctor` / `auth status --probe` / `whoami --probe` also re-login once.
-- **Silent / background update** (default off): `--check-update` or `PLUMELOG_CHECK_UPDATE=1` prints a stderr hint when a newer GitHub Release exists; `--auto-update` or `PLUMELOG_AUTO_UPDATE=1` (or `config set auto_update true`) silently downloads, verifies SHA-256, and replaces this binary. Also `plumelog update --check` / `update --yes`.
+- **Silent / background update** (default off in 0.1.6): `--check-update` or `PLUMELOG_CHECK_UPDATE=1` prints a stderr hint when a newer GitHub Release exists; `--auto-update` or `PLUMELOG_AUTO_UPDATE=1` (or `config set auto_update true`) silently downloads, verifies SHA-256, and replaces this binary. Also `plumelog update --check` / `update --yes`.
 
 ## What's new in 0.1.5
 
