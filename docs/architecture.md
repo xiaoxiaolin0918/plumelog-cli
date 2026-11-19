@@ -80,7 +80,7 @@ PlumeLog uses the same servlet session as the web UI.
 | Flags / env / TTY | `--username` + `--password` / `PLUMELOG_LOGIN_PASSWORD` / prompt |
 | Open auth | Empty username still POSTs `/login` when server has no `login.username` → `auth: open` |
 | **`--web` / `--browser`** | Bind **127.0.0.1** only (never `0.0.0.0`), one-shot tokenized URL, system browser form, ~**120s** timeout, then POST `/login` and write jar. Passwords not logged or written to disk. Existing jar session requires **`--force`**. Dry-run does not leak plaintext. |
-| Auto re-login (opt-in) | `PLUMELOG_AUTO_LOGIN=1` or `--auto-login`: on upstream 401, re-login **once** from env and replay (Issue #2) |
+| Auto re-login | Default on when `login.cred` has `auto_login: true`, or a full `PLUMELOG_LOGIN_*` env pair is present: on upstream 401, re-login **once** and replay (Issue #2 / #41), including `doctor` / `auth status --probe` / `whoami --probe`. Disable with `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0`. |
 
 Cookie jar path:
 

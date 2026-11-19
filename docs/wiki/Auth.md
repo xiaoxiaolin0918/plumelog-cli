@@ -29,9 +29,9 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 
 `auth status` / `whoami` print **metadata only** (`has_cookie`, `cookie_path`, `base_url`, …) — never the cookie value.
 
-### Opt-in auto re-login
+### Auto re-login
 
-`PLUMELOG_AUTO_LOGIN=1` or `--auto-login`, **or** a remembered credential with `auto_login` from the web form: on upstream 401, re-login once and replay the request.
+When a remembered `login.cred` (`auto_login: true`, from the web form) **or** a full `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` env pair is present, an upstream 401 triggers one silent re-login and replay **by default**. This includes `doctor` probes and `auth status --probe` / `whoami --probe`, as well as commands that go through invoke (`query`, `trace`, `api`, …). Turn this off with `--no-auto-login` or `PLUMELOG_AUTO_LOGIN=0`. `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` still force-enable it.
 
 Credential pairs are **atomic** (username and password from the same source):
 
@@ -44,16 +44,17 @@ A silent-login **402** clears `login.cred` and disables remembered auto-login fo
 
 ### Logout
 
-- Default: `POST /logout` + clear local cookie jar only. Encrypted `login.cred` is **kept** so a later `--auto-login` can mint a new session.
+- Default: `POST /logout` + clear local cookie jar only. Encrypted `login.cred` is **kept** so a later 401 can silently mint a new session.
 - `--forget` (alias `--clear-password`): also deletes `login.cred` (+ `login.key` when present). Double-clear is opt-in only.
 - Global `--dry-run` previews the logout request and does not clear jar or credentials.
 
-### Remember / auto-login (opt-in)
+### Remember / auto-login
 
 | Flag / control | Meaning |
 |----------------|---------|
-| Web form **记住并自动登录** | Encrypted remember into `login.cred` (Windows DPAPI; other OS AES-GCM + `login.key`). Never plaintext in `config.json`. Equivalent semantic to other CLIs' `--remember` / `--store-password`. |
-| `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` | On upstream 401, silent re-login **once** and replay. Also enabled when `login.cred` has `auto_login: true`. |
+| Web form **记住并自动登录** | Encrypted remember into `login.cred` (Windows DPAPI; other OS AES-GCM + `login.key`). Never plaintext in `config.json`. After this, 401 silent re-login is **on by default**. |
+| `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` | Force-enable one silent re-login and replay on upstream 401. |
+| `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0` | Disable silent re-login even when `login.cred` or an env credential pair is present. |
 | `auth logout --forget` | Clears session **and** remembered password. |
 
-`plumelog doctor` exposes `can_auto_login` (bool), plus `password_stored` and a non-secret `username` from `login.cred` metadata — **without decrypting the password**. `true` means auto-login is enabled and either `login.cred` exists or a full `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` env pair is set.
+`plumelog doctor` exposes `can_auto_login` (bool), plus `password_stored` and a non-secret `username` from `login.cred` metadata — **without decrypting the password**. `true` means silent re-login is currently enabled and either `login.cred` exists or a full `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` env pair is set.

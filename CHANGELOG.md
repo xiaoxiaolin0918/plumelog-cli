@@ -5,6 +5,11 @@
 
 All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
 
+### Changed
+
+- **Auth (Issue #41)**: when a remembered `login.cred` (`auto_login: true`) or a full `PLUMELOG_LOGIN_USERNAME`+`PASSWORD` env pair is present, 401 silent re-login is **on by default**. Disable with `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0`; `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` still force-enable it.
+- `doctor`, `auth status --probe`, and `whoami --probe` now also silent-relogin once on 401 when auto-login is enabled (previously only invoke-path commands did).
+
 ## [0.1.5] - 2026-11-03
 
 ### Added

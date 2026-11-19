@@ -334,7 +334,7 @@ func webLoginFormHTML(baseURL, username string, remember bool, errMsg string) st
 <main class="card">
 <p class="brand">plumelog CLI</p>
 <h1>本机登录</h1>
-<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。勾选「记住并自动登录」后，密码以本机加密方式保存（Windows 使用 DPAPI），供之后的 <code>--auto-login</code> 使用；明文不会写入 config.json。</p>
+<p class="note">凭据仅提交到本机 127.0.0.1，不会离开此电脑。密码不会再次显示，也不会写入日志。勾选「记住并自动登录」后，密码以本机加密方式保存（Windows 使用 DPAPI），之后会话过期（401）时会默认静默重登一次。不想自动时用 <code>--no-auto-login</code> 或 <code>PLUMELOG_AUTO_LOGIN=0</code>；明文不会写入 config.json。</p>
 ` + errBlock + `
 <form method="POST" autocomplete="off">
 <div class="field"><label for="base_url">服务地址</label><input id="base_url" name="base_url" type="url" value="` + html.EscapeString(baseURL) + `" placeholder="http://localhost:8891" autocomplete="url"></div>

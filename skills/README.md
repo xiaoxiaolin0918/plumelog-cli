@@ -46,6 +46,6 @@ plumelog skills update --skill plumelog-query
 ## Auth baseline (remember / auto-login / forget)
 
 - Remember: Web「记住并自动登录」→ encrypted `login.cred` (no plaintext in config).
-- Auto-login: `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` (or cred `auto_login`).
+- Auto-login: default on when `login.cred` (`auto_login: true`) or a `PLUMELOG_LOGIN_*` env pair is present; disable with `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0`. `doctor` / `auth status --probe` / `whoami --probe` also retry once on 401.
 - Logout: default clears cookie only; `--forget` / `--clear-password` also clears `login.cred`.
 - `doctor` exposes `can_auto_login` without decrypting passwords. Never put real secrets in examples.

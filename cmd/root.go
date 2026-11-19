@@ -29,6 +29,7 @@ type App struct {
 	flagDryRun        bool
 	flagYes           bool
 	flagAutoLogin     bool
+	flagNoAutoLogin   bool
 	flagAdminPassword string
 	flagPathPrefix    string
 	flagCookieJar     string
@@ -132,7 +133,8 @@ Discovery:
 	p.StringVar(&a.flagJQ, "jq", "", "jq expression applied to the JSON envelope")
 	p.BoolVar(&a.flagDryRun, "dry-run", false, "print the request and do not send it")
 	p.BoolVarP(&a.flagYes, "yes", "y", false, "confirm a high-risk-write")
-	p.BoolVar(&a.flagAutoLogin, "auto-login", false, "on 401, silent login once from PLUMELOG_LOGIN_* env or encrypted login.cred (web remember) and replay (env PLUMELOG_AUTO_LOGIN=1)")
+	p.BoolVar(&a.flagAutoLogin, "auto-login", false, "on 401, silent login once from PLUMELOG_LOGIN_* or encrypted login.cred and replay; already the default when those credentials exist")
+	p.BoolVar(&a.flagNoAutoLogin, "no-auto-login", false, "disable silent re-login on 401 even when login.cred or PLUMELOG_LOGIN_* is present (env PLUMELOG_AUTO_LOGIN=0)")
 	p.StringVar(&a.flagAdminPassword, "admin-password", "", "admin password for deleteQueue/deleteIndex (env PLUMELOG_ADMIN_PASSWORD); never printed")
 	p.StringVar(&a.flagPathPrefix, "path-prefix", "auto", `path prefix: auto, "" (or root), or /plumelog`)
 	p.StringVar(&a.flagCookieJar, "cookie-jar", "", "override the Netscape cookie jar path")
@@ -299,12 +301,7 @@ func (a *App) resolveInto(cmd *cobra.Command) error {
 	a.jq = a.flagJQ
 	a.dryRun = a.flagDryRun
 	a.yes = a.flagYes
-	a.autoLogin = a.flagAutoLogin || envTruthy("PLUMELOG_AUTO_LOGIN")
-	if !a.autoLogin {
-		if _, prefer, ok := credstore.PeekUsernameAutoLogin(credstore.DirFromConfigPath(a.configPath)); ok && prefer {
-			a.autoLogin = true
-		}
-	}
+	a.autoLogin = a.resolveAutoLoginEnabled()
 
 	admin := os.Getenv("PLUMELOG_ADMIN_PASSWORD")
 	if changed(cmd, "admin-password") {
@@ -501,6 +498,8 @@ func (a *App) invoke(cmd *cobra.Command, policy risk.Policy, req client.Request)
 
 // doWithAutoLogin performs req once; on 401 with auto-login enabled, silent-login once and replay.
 // Shared by invoke, invokeTraceGet, and query apps so auth retry stays in one place.
+// doctor / auth status --probe / whoami --probe use doProbeWithAutoLogin (same retry,
+// but network errors are returned unprinted so the caller can wrap them).
 func (a *App) doWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Response, error) {
 	resp, err := a.do(cmd, req)
 	if err != nil {
@@ -511,6 +510,26 @@ func (a *App) doWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Re
 			return client.Response{}, err
 		}
 		return a.do(cmd, req)
+	}
+	return resp, nil
+}
+
+// doProbeWithAutoLogin is the probe counterpart of doWithAutoLogin: on 401 with
+// auto-login enabled, silent-login once and retry. Network errors are returned
+// as-is (no fail envelope). A silent-login failure may already have been printed.
+func (a *App) doProbeWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Response, error) {
+	if a.client == nil {
+		return client.Response{}, errors.New("HTTP client is not configured")
+	}
+	resp, err := a.client.Do(cmd.Context(), req)
+	if err != nil {
+		return resp, err
+	}
+	if a.autoLogin && !a.dryRun && isUnauthorized(resp) && !isLoginRequest(req) {
+		if err := a.silentLogin(cmd); err != nil {
+			return client.Response{}, err
+		}
+		return a.client.Do(cmd.Context(), req)
 	}
 	return resp, nil
 }
@@ -597,13 +616,45 @@ func (a *App) finishUpstream(cmd *cobra.Command, resp client.Response, enrich ..
 }
 
 func envTruthy(name string) bool {
-	v := strings.TrimSpace(strings.ToLower(os.Getenv(name)))
-	switch v {
+	v, explicit := envBool(name)
+	return explicit && v
+}
+
+// envBool reports an explicit boolean environment value.
+// Empty or unrecognized values are treated as unset (not an override).
+func envBool(name string) (value bool, explicit bool) {
+	raw, ok := os.LookupEnv(name)
+	if !ok {
+		return false, false
+	}
+	switch strings.TrimSpace(strings.ToLower(raw)) {
 	case "1", "true", "yes", "on":
-		return true
+		return true, true
+	case "0", "false", "no", "off":
+		return false, true
 	default:
+		return false, false
+	}
+}
+
+// resolveAutoLoginEnabled decides whether 401 should trigger a one-shot silent login.
+// Precedence: --no-auto-login > --auto-login > explicit PLUMELOG_AUTO_LOGIN > credentials present.
+func (a *App) resolveAutoLoginEnabled() bool {
+	if a.flagNoAutoLogin {
 		return false
 	}
+	if a.flagAutoLogin {
+		return true
+	}
+	if v, explicit := envBool("PLUMELOG_AUTO_LOGIN"); explicit {
+		return v
+	}
+	if _, prefer, ok := credstore.PeekUsernameAutoLogin(credstore.DirFromConfigPath(a.configPath)); ok && prefer {
+		return true
+	}
+	user := strings.TrimSpace(os.Getenv("PLUMELOG_LOGIN_USERNAME"))
+	pass := os.Getenv("PLUMELOG_LOGIN_PASSWORD")
+	return user != "" && pass != ""
 }
 
 func isUnauthorized(resp client.Response) bool {
@@ -678,7 +729,7 @@ func (a *App) resolveSilentLoginCreds() (user, pass string, err error) {
 	return user, pass, nil
 }
 
-// rememberedStatus reports opt-in auto-login readiness without decrypting passwords.
+// rememberedStatus reports auto-login readiness without decrypting passwords.
 // can_auto_login is true only when auto-login is enabled AND (encrypted login.cred exists
 // OR a full PLUMELOG_LOGIN_USERNAME+PASSWORD env pair is set).
 func (a *App) rememberedStatus() map[string]any {
