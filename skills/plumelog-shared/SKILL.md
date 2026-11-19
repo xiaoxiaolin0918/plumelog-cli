@@ -1,6 +1,6 @@
 ---
 name: plumelog-shared
-version: 0.1.5
+version: 0.1.6
 description: "Use for plumelog CLI setup/auth: auth login/status/logout, whoami, config, named --profile / config profile, doctor, JSON ok/result envelope (success stdout; failure stderr with object error), --dry-run/--jq/--yes/--admin-password, high-risk gate (exit 10 + confirmation_required), cookie jar, PLUMELOG_* env, path-prefix, no-secret rules."
 metadata:
   requires:
@@ -189,7 +189,7 @@ plumelog skills update --dry-run
 - 默认安装根：`~/.agents/skills`（Unix）/ `%USERPROFILE%\.agents\skills`（Windows）
 - `skills update`：把已装副本强制刷新为**当前二进制配套**版本（等价于针对当前源的 `install --force`），避免与 CLI 漂移（Issue #5）
 - `skills list --check`：对比 bundled vs installed 的 SKILL.md frontmatter `version`（installed / outdated / missing / unknown）
-- 二进制自更新：`plumelog update --check`（只查）/ `plumelog update --yes`（下载 Release 资产、校验 checksums 后替换本二进制）
+- 二进制自更新：`plumelog update --check`（只查）/ `plumelog update --yes`（下载 Release 资产、校验 checksums 后替换本二进制）。后台检查 / 静默替换默认关：`--check-update` / `PLUMELOG_CHECK_UPDATE` / `config check_update`；`--auto-update` / `PLUMELOG_AUTO_UPDATE` / `config auto_update`（打开 auto 会隐含 check）。提示只走 stderr，不污染 JSON。
 
 ## Windows / MSYS
 

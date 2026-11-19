@@ -65,6 +65,8 @@ func (a *App) newConfigShow() *cobra.Command {
 					"PLUMELOG_PATH_PREFIX":    presence(os.Getenv("PLUMELOG_PATH_PREFIX")),
 					"PLUMELOG_LOGIN_USERNAME": presence(os.Getenv("PLUMELOG_LOGIN_USERNAME")),
 					"PLUMELOG_PROFILE":        presence(os.Getenv("PLUMELOG_PROFILE")),
+					"PLUMELOG_CHECK_UPDATE":   presence(os.Getenv("PLUMELOG_CHECK_UPDATE")),
+					"PLUMELOG_AUTO_UPDATE":    presence(os.Getenv("PLUMELOG_AUTO_UPDATE")),
 				},
 			})
 		},
@@ -119,7 +121,6 @@ func (a *App) newConfigSet() *cobra.Command {
 	mark(cmd, risk.Write, "Set one non-secret config field")
 	return cmd
 }
-
 
 func (a *App) newConfigProfileCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -284,6 +285,8 @@ func storedView(f config.File) map[string]any {
 		"format":              f.Format,
 		"cookie_jar":          f.CookieJar,
 		"login_username":      f.LoginUsername,
+		"check_update":        f.CheckUpdate,
+		"auto_update":         f.AutoUpdate,
 	}
 }
 
@@ -311,6 +314,10 @@ func storedValue(f config.File, key string) (any, bool, error) {
 		return f.CookieJar, f.CookieJar != "", nil
 	case "login_username":
 		return f.LoginUsername, f.LoginUsername != "", nil
+	case "check_update":
+		return f.CheckUpdate, f.CheckUpdate, nil
+	case "auto_update":
+		return f.AutoUpdate, f.AutoUpdate, nil
 	default:
 		return nil, false, fmt.Errorf("unknown key %q (want %s)", key, strings.Join(config.Keys(), ", "))
 	}
@@ -368,8 +375,31 @@ func applySet(f *config.File, key, val string) error {
 		f.CookieJar = val
 	case "login_username":
 		f.LoginUsername = val
+	case "check_update":
+		v, err := parseConfigBool(val)
+		if err != nil {
+			return fmt.Errorf("check_update %w", err)
+		}
+		f.CheckUpdate = v
+	case "auto_update":
+		v, err := parseConfigBool(val)
+		if err != nil {
+			return fmt.Errorf("auto_update %w", err)
+		}
+		f.AutoUpdate = v
 	default:
 		return fmt.Errorf("unknown key %q (want %s)", key, strings.Join(config.Keys(), ", "))
 	}
 	return nil
+}
+
+func parseConfigBool(val string) (bool, error) {
+	switch strings.TrimSpace(strings.ToLower(val)) {
+	case "1", "true", "yes", "on":
+		return true, nil
+	case "0", "false", "no", "off":
+		return false, nil
+	default:
+		return false, fmt.Errorf("must be true/false (or 1/0, yes/no, on/off)")
+	}
 }

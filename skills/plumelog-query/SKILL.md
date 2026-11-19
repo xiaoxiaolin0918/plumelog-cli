@@ -1,6 +1,6 @@
 ---
 name: plumelog-query
-version: 0.1.5
+version: 0.1.6
 description: "PlumeLog log search: query search/dsl/apps with Home.vue shortcut filters, raw DSL, time window, highlight/sort. Risk: read."
 metadata:
   requires:
@@ -15,7 +15,7 @@ metadata:
 链路检索见 [`../plumelog-trace/SKILL.md`](../plumelog-trace/SKILL.md)。
 
 ## 命令
-- `plumelog update --check|--yes` — self-update from GitHub Releases
+- `plumelog update --check|--yes` — self-update from GitHub Releases; optional `--check-update` / `--auto-update` (or `PLUMELOG_CHECK_UPDATE` / `PLUMELOG_AUTO_UPDATE`, default off) for background check / silent replace
 
 | 命令 | 说明 | Risk |
 |------|------|------|

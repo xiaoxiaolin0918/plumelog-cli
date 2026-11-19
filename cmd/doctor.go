@@ -83,6 +83,8 @@ Prints config path, cookie path, path prefix, and can_auto_login (remembered/env
 				"can_auto_login":  rem["can_auto_login"],
 				"password_stored": rem["password_stored"],
 				"username":        rem["username"],
+				"check_update":    a.checkUpdateEnabled,
+				"auto_update":     a.autoUpdateEnabled,
 				"checks":          checks,
 			}
 			env := output.Envelope{OK: healthy, Result: output.MustResult(result)}
