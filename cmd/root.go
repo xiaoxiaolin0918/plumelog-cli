@@ -498,6 +498,8 @@ func (a *App) invoke(cmd *cobra.Command, policy risk.Policy, req client.Request)
 
 // doWithAutoLogin performs req once; on 401 with auto-login enabled, silent-login once and replay.
 // Shared by invoke, invokeTraceGet, and query apps so auth retry stays in one place.
+// doctor / auth status --probe / whoami --probe use doProbeWithAutoLogin (same retry,
+// but network errors are returned unprinted so the caller can wrap them).
 func (a *App) doWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Response, error) {
 	resp, err := a.do(cmd, req)
 	if err != nil {
@@ -508,6 +510,26 @@ func (a *App) doWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Re
 			return client.Response{}, err
 		}
 		return a.do(cmd, req)
+	}
+	return resp, nil
+}
+
+// doProbeWithAutoLogin is the probe counterpart of doWithAutoLogin: on 401 with
+// auto-login enabled, silent-login once and retry. Network errors are returned
+// as-is (no fail envelope). A silent-login failure may already have been printed.
+func (a *App) doProbeWithAutoLogin(cmd *cobra.Command, req client.Request) (client.Response, error) {
+	if a.client == nil {
+		return client.Response{}, errors.New("HTTP client is not configured")
+	}
+	resp, err := a.client.Do(cmd.Context(), req)
+	if err != nil {
+		return resp, err
+	}
+	if a.autoLogin && !a.dryRun && isUnauthorized(resp) && !isLoginRequest(req) {
+		if err := a.silentLogin(cmd); err != nil {
+			return client.Response{}, err
+		}
+		return a.client.Do(cmd.Context(), req)
 	}
 	return resp, nil
 }

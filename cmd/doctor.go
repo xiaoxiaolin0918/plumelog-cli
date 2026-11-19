@@ -43,16 +43,29 @@ Prints config path, cookie path, path prefix, and can_auto_login (remembered/env
 			})
 
 			if healthy {
-				_, ok, detail := a.probeJSON(cmd, "/getRunModel")
+				_, ok, detail, err := a.probeJSON(cmd, "/getRunModel")
+				if err != nil {
+					return err
+				}
 				if !ok {
 					healthy = false
 				}
 				checks = append(checks, check{Name: "run_model", OK: ok, Detail: detail})
-				_, qok, qdetail := a.probeJSON(cmd, "/getQueueCounts")
+				_, qok, qdetail, err := a.probeJSON(cmd, "/getQueueCounts")
+				if err != nil {
+					return err
+				}
 				if !qok {
 					healthy = false
 				}
 				checks = append(checks, check{Name: "queue", OK: qok, Detail: qdetail})
+				names = a.cookieNames()
+				for i := range checks {
+					if checks[i].Name == "cookie" {
+						checks[i].Detail = cookieDetail(a.jar != nil && a.jar.HasAny(), names)
+						break
+					}
+				}
 			}
 
 			rem := a.rememberedStatus()
@@ -87,28 +100,31 @@ Prints config path, cookie path, path prefix, and can_auto_login (remembered/env
 	return cmd
 }
 
-func (a *App) probeJSON(cmd *cobra.Command, path string) (string, bool, string) {
-	resp, err := a.client.Do(cmd.Context(), client.Request{Method: "POST", Path: path})
+func (a *App) probeJSON(cmd *cobra.Command, path string) (string, bool, string, error) {
+	resp, err := a.doProbeWithAutoLogin(cmd, client.Request{Method: "POST", Path: path})
 	if err != nil {
-		return "", false, "request failed"
+		if _, ok := err.(*PrintedError); ok {
+			return "", false, "", err
+		}
+		return "", false, "request failed", nil
 	}
 	if code, ok := client.ResultCode(resp.Body); ok && code == 401 {
-		return "", false, "unauthenticated (401); run plumelog auth login"
+		return "", false, "unauthenticated (401); run plumelog auth login", nil
 	}
 	if code, ok := client.ResultCode(resp.Body); ok && code >= 400 {
-		return "", false, "server code " + itoa(code)
+		return "", false, "server code " + itoa(code), nil
 	}
 	if resp.Status >= 400 {
-		return "", false, "HTTP " + itoa(resp.Status)
+		return "", false, "HTTP " + itoa(resp.Status), nil
 	}
 	body := strings.TrimSpace(string(resp.Body))
 	if body == "" {
-		return "", true, "empty body"
+		return "", true, "empty body", nil
 	}
 	if json.Valid([]byte(body)) {
-		return body, true, compact(body)
+		return body, true, compact(body), nil
 	}
-	return body, true, body
+	return body, true, body, nil
 }
 
 func cookieDetail(has bool, names []string) string {

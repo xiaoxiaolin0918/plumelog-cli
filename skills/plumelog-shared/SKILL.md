@@ -203,7 +203,7 @@ plumelog skills update --dry-run
 
 ## 401 自动重登（Issue #2 / #41）
 
-Session Cookie 可能数小时失效。只要存在有效 `login.cred`（web「记住并自动登录」）或完整 `PLUMELOG_LOGIN_USERNAME`+`PASSWORD` 环境变量，遇上上游 `code:401` / HTTP 401 时会**默认**自动重登一次并重放原请求：
+Session Cookie 可能数小时失效。只要存在 `login.cred`（`auto_login: true`，来自 web「记住并自动登录」）或完整 `PLUMELOG_LOGIN_USERNAME`+`PASSWORD` 环境变量，遇上上游 `code:401` / HTTP 401 时会**默认**自动重登一次并重放原请求（含 `doctor` / `auth status --probe` / `whoami --probe`）：
 
 ```bash
 export PLUMELOG_LOGIN_USERNAME="..."

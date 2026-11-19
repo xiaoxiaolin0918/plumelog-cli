@@ -31,7 +31,7 @@
 
 | 域 | 最小覆盖 |
 |----|----------|
-| auth | login / status / logout；默认凭据 / `--no-auto-login` / `--auto-login` 401 重放（单测已有） |
+| auth | login / status / logout；默认凭据 / `--no-auto-login` / `--auto-login` 401 重放；doctor 与 status/whoami `--probe` 同样重登一次（单测已有） |
 | query | `search` / `dsl` / `apps`；多词 `-q` AND；`--range`；空 body → `ok:false` |
 | trace | `trace get` 空 hits 有 hint；与通用 invoke 共用 `doWithAutoLogin` |
 | alarm | `list` / `save` / `delete --yes` / `messages` |

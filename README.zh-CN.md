@@ -132,7 +132,7 @@ plumelog
 
 `POST /login`，body 为 `{"username","password"}`。`402` 表示凭据无效。服务端未配置 `login.username` 时，空的 `auth login` 仍会 POST 并记录 `auth: open`。
 
-`auth login --web` 中文表单含 **服务地址**（可由 `--base-url` / 环境变量 / 配置预填）与可选 **记住并自动登录**（密码加密存为配置旁的 `login.cred`，不会明文写入 `config.json`）。详见 [鉴权 Auth](docs/wiki/Auth.md)。可选自动重登：`--auto-login` / `PLUMELOG_AUTO_LOGIN=1`（或 Web「记住并自动登录」）。`auth logout` 默认保留 `login.cred`；`--forget`（别名 `--clear-password`）才双清。`doctor` 输出 `can_auto_login`（不解密密码）。
+`auth login --web` 中文表单含 **服务地址**（可由 `--base-url` / 环境变量 / 配置预填）与可选 **记住并自动登录**（密码加密存为配置旁的 `login.cred`，不会明文写入 `config.json`）。详见 [鉴权 Auth](docs/wiki/Auth.md)。当已记住的 `login.cred`（且 `auto_login: true`）或完整 `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` 环境变量存在时，遇到 401 **默认**静默重登一次并重放；用 `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0` 关闭。`--auto-login` / `PLUMELOG_AUTO_LOGIN=1` 仍可强制开启。`doctor`、`auth status --probe`、`whoami --probe` 的探针在可自动登录时也会静默重登一次。`auth logout` 默认保留 `login.cred`；`--forget`（别名 `--clear-password`）才双清。`doctor` 输出 `can_auto_login`（不解密密码）。
 
 `auth status` 只输出 `has_cookie`、`cookie_path`、`base_url`，**从不**打印 Cookie 值。
 

@@ -31,7 +31,7 @@ PlumeLog authenticates with a **servlet session cookie** (commonly `JSESSIONID`)
 
 ### Auto re-login
 
-When a remembered `login.cred` (`auto_login: true`, from the web form) **or** a full `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` env pair is present, an upstream 401 triggers one silent re-login and replay **by default**. Turn this off with `--no-auto-login` or `PLUMELOG_AUTO_LOGIN=0`. `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` still force-enable it.
+When a remembered `login.cred` (`auto_login: true`, from the web form) **or** a full `PLUMELOG_LOGIN_USERNAME`+`PLUMELOG_LOGIN_PASSWORD` env pair is present, an upstream 401 triggers one silent re-login and replay **by default**. This includes `doctor` probes and `auth status --probe` / `whoami --probe`, as well as commands that go through invoke (`query`, `trace`, `api`, …). Turn this off with `--no-auto-login` or `PLUMELOG_AUTO_LOGIN=0`. `--auto-login` / `PLUMELOG_AUTO_LOGIN=1` still force-enable it.
 
 Credential pairs are **atomic** (username and password from the same source):
 

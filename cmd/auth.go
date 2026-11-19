@@ -236,9 +236,12 @@ func (a *App) runAuthStatus(cmd *cobra.Command, probe bool) error {
 		return a.ok(cmd, result)
 	}
 	req := client.Request{Method: "POST", Path: "/getRunModel"}
-	resp, err := a.client.Do(cmd.Context(), req)
+	resp, err := a.doProbeWithAutoLogin(cmd, req)
 	probeOut := map[string]any{"endpoint": "/getRunModel"}
 	if err != nil {
+		if _, ok := err.(*PrintedError); ok {
+			return err
+		}
 		probeOut["ok"] = false
 		probeOut["error"] = "request failed"
 		result["probe"] = probeOut
