@@ -36,25 +36,30 @@ type App struct {
 	flagConfig        string
 	flagProfile       string
 	flagTimeout       time.Duration
+	flagCheckUpdate   bool
+	flagAutoUpdate    bool
 
-	baseURL       string
-	format        string
-	jq            string
-	dryRun        bool
-	yes           bool
-	autoLogin     bool
-	adminPassword string
-	prefixMode    string
-	timeout       time.Duration
-	profile       string
-	configPath    string
-	cookiePath    string
-	cfg           config.File
-	client        *client.Client
-	jar           *client.Jar
-	defaultSize   int
-	timeWindow    time.Duration
-	extraSecrets  []string
+	baseURL             string
+	format              string
+	jq                  string
+	dryRun              bool
+	yes                 bool
+	autoLogin           bool
+	adminPassword       string
+	prefixMode          string
+	timeout             time.Duration
+	profile             string
+	configPath          string
+	cookiePath          string
+	cfg                 config.File
+	client              *client.Client
+	jar                 *client.Jar
+	defaultSize         int
+	timeWindow          time.Duration
+	extraSecrets        []string
+	checkUpdateEnabled  bool
+	autoUpdateEnabled   bool
+	updateFlagsResolved bool
 }
 
 // Main runs the CLI and returns an exit code.
@@ -141,6 +146,8 @@ Discovery:
 	p.StringVar(&a.flagConfig, "config", "", "override the config.json path")
 	p.StringVar(&a.flagProfile, "profile", "", "named profile (env PLUMELOG_PROFILE; default from profiles.json or default)")
 	p.DurationVar(&a.flagTimeout, "timeout", 0, "HTTP timeout (default 30s)")
+	p.BoolVar(&a.flagCheckUpdate, "check-update", false, "opportunistic background update check (env PLUMELOG_CHECK_UPDATE=1; config check_update); stderr hint only")
+	p.BoolVar(&a.flagAutoUpdate, "auto-update", false, "when check-update finds a newer release, silently download/replace (env PLUMELOG_AUTO_UPDATE=1; config auto_update); default off")
 
 	root.AddCommand(
 		a.newAuthCmd(),
@@ -157,6 +164,7 @@ Discovery:
 		a.newUpdateCmd(),
 		a.newVersionCmd(),
 	)
+	attachBackgroundUpdateHook(root, a)
 	silence(root)
 	return root
 }
@@ -302,6 +310,7 @@ func (a *App) resolveInto(cmd *cobra.Command) error {
 	a.dryRun = a.flagDryRun
 	a.yes = a.flagYes
 	a.autoLogin = a.resolveAutoLoginEnabled()
+	a.resolveUpdateFlags()
 
 	admin := os.Getenv("PLUMELOG_ADMIN_PASSWORD")
 	if changed(cmd, "admin-password") {

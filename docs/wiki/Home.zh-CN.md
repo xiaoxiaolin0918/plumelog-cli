@@ -3,7 +3,7 @@
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端（默认端口 **8891**）。
 
 - **仓库：** https://github.com/xiaoxiaolin0918/plumelog-cli（PUBLIC，MIT）
-- **发布：** [v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)
+- **发布：** [v0.1.6](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6)
 - **二进制：** `plumelog`
 - **鉴权：** 与网页相同的 Session Cookie — **不是** OAuth / Bearer
 - **文档位置：** 本目录页面在**仓库内** [`docs/wiki/`](README.md)，**不是** GitHub Wiki（**已废止并关闭**；勿推 .wiki.git）
@@ -17,6 +17,7 @@ English: [Home](Home.md)
 | [Getting-Started](Getting-Started.md) | 安装、doctor、首次查询 |
 | [Auth](Auth.md) | 登录方式（含 `--web`） |
 | [Skills-for-AI](Skills-for-AI.md) | Agent：信封、exit 10、skills |
+| [Update](Update.md) | `update --check/--yes`、后台检查与静默更新 |
 | [Architecture](Architecture.md) | 契约摘要 + 链到仓内文档 |
 
 ## 安全

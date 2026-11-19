@@ -1,9 +1,14 @@
 # Changelog
 
+All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
 
 ## Unreleased
 
-All notable changes to **plumelog-cli** are documented here. The binary name is `plumelog`.
+## [0.1.6] - 2026-11-19
+
+### Added
+
+- Background update check and silent auto-replace (**default off**): `--check-update` / `PLUMELOG_CHECK_UPDATE=1` / `config set check_update true`; `--auto-update` / `PLUMELOG_AUTO_UPDATE=1` / `config set auto_update true` (implies check). After a successful command, opportunistic GitHub Releases check (24h cache, short timeout); hints go to **stderr** only and never JSON stdout. Auto-update verifies SHA-256, replaces this binary, and rolls back on failure.
 
 ### Changed
 
@@ -68,6 +73,7 @@ All notable changes to **plumelog-cli** are documented here. The binary name is 
 
 - See GitHub Releases for prior notes.
 
+[0.1.6]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6
 [0.1.5]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5
 [0.1.4]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.4
 [0.1.3]: https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.3

@@ -77,10 +77,20 @@ plumelog_<os>_<arch>[.exe] + checksums.txt).
   plumelog update --check   # compare current vs latest; do not download
   plumelog update --yes     # download matching asset, verify SHA-256, replace this binary
 
+Background check and silent replace are off by default. Enable with:
+
+  --check-update / PLUMELOG_CHECK_UPDATE=1 / config check_update=true
+  --auto-update  / PLUMELOG_AUTO_UPDATE=1  / config auto_update=true
+
+Check runs after a successful command (24h cache, short timeout) and prints a
+stderr hint only. Auto-update implies check-update and replaces the binary
+when a newer release is found; failure is rolled back and reported on stderr.
+
 mgr invokes: <bin> update [--check|--yes].`,
 		Example: `  plumelog update --check
   plumelog update --yes
-  plumelog update --yes --dry-run`,
+  plumelog update --yes --dry-run
+  plumelog config set auto_update true`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a.format = firstNonEmpty(a.format, "json")
 			if checkOnly || !a.yes {
@@ -103,13 +113,13 @@ mgr invokes: <bin> update [--check|--yes].`,
 					Risk:         policy.Level,
 					WouldRequire: []string{},
 					Result: output.MustResult(map[string]any{
-						"would":   "download+verify+replace",
-						"current": res.Current,
-						"latest":  res.Latest,
-						"status":  res.Status,
-						"asset":   res.Asset,
+						"would":     "download+verify+replace",
+						"current":   res.Current,
+						"latest":    res.Latest,
+						"status":    res.Status,
+						"asset":     res.Asset,
 						"asset_url": res.AssetURL,
-						"binary":  mustExePath(),
+						"binary":    mustExePath(),
 					}),
 				}
 				return a.write(cmd, env)

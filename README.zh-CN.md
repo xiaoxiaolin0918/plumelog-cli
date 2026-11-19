@@ -1,7 +1,7 @@
 # plumelog
 
 [![CI](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaoxiaolin0918/plumelog-cli/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)
+[![Release](https://img.shields.io/github/v/release/xiaoxiaolin0918/plumelog-cli?include_prereleases)](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6)
 
 [PlumeLog](https://github.com/fayechenlong/plumelog) 服务的命令行客户端。默认端口 **8891**。
 
@@ -35,13 +35,18 @@ go test ./...
 **Go install：**
 
 ```bash
-go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.5
+go install github.com/xiaoxiaolin0918/plumelog-cli@v0.1.6
 
-也可从 [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) 下载平台二进制（校验 `checksums.txt`）。无自更新命令。 自更新：`plumelog update --check` / `plumelog update --yes`。
+也可从 [GitHub Releases](https://github.com/xiaoxiaolin0918/plumelog-cli/releases) 下载平台二进制（校验 `checksums.txt`）。无自更新命令。 自更新：`plumelog update --check` / `plumelog update --yes`。后台检查 / 静默替换默认关闭，可用 `--check-update` / `PLUMELOG_CHECK_UPDATE`、`--auto-update` / `PLUMELOG_AUTO_UPDATE`，或 `config set check_update|auto_update true` 打开。
 ```
 
-发布说明：[v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.5)。
+发布说明：[v0.1.5](https://github.com/xiaoxiaolin0918/plumelog-cli/releases/tag/v0.1.6)。
 
+
+## 0.1.6 更新摘要
+
+- **Issue #41**：有 `login.cred`（`auto_login: true`）或完整 `PLUMELOG_LOGIN_*` 环境变量账密时，401 默认静默重登；用 `--no-auto-login` / `PLUMELOG_AUTO_LOGIN=0` 关闭。`doctor` / `auth status --probe` / `whoami --probe` 同样会重登一次。
+- **后台检查 / 静默更新**（默认关闭）：`--check-update` 或 `PLUMELOG_CHECK_UPDATE=1` 在有新 Release 时只向 stderr 提示；`--auto-update` 或 `PLUMELOG_AUTO_UPDATE=1`（或 `config set auto_update true`）会校验 SHA-256 后静默替换本机二进制。仍可用 `plumelog update --check` / `update --yes`。
 
 ## 0.1.5 更新摘要
 
